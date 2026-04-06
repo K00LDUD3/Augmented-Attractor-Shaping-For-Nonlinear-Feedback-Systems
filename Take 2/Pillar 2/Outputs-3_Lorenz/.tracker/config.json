@@ -1,0 +1,6 @@
+{
+    "use_timestamp": true,
+    "use_param_hash": true,
+    "timestamp_hash": false,
+    "hash_length": 10
+}

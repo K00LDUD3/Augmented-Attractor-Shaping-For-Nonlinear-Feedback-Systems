@@ -1,0 +1,15 @@
+render:
+  step: 1
+  trail_length: 400
+  fps: 240
+
+view:
+  distance: 40
+  elevation: 30
+
+style:
+  line_width: 1
+
+video:
+  save: false
+  filename: "out.mp4"

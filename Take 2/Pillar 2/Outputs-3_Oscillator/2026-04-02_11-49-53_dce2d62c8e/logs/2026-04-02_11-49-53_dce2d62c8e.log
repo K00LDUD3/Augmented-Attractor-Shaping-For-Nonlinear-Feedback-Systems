@@ -1,0 +1,10 @@
+[2026-04-02 11:49:53] [INFO] [MET]: START Session 20
+[2026-04-02 11:49:53] [INFO] [DEF]: Coupling mode: independent
+[2026-04-02 11:49:53] [INFO] [DEF]: Sweeping 7D parameter space, n_samples=5000
+[2026-04-02 12:46:59] [INFO] [DEF]: MLE stats: max=0.0876, mean=-0.0239, std=0.0324
+[2026-04-02 12:46:59] [INFO] [DEF]: Positive MLE count: 1296 / 5000
+[2026-04-02 12:46:59] [INFO] [DEF]: MLE > 0.05: 30, MLE > 0.1: 0, MLE > 0.2: 0
+[2026-04-02 12:46:59] [INFO] [DEF]: Found 0 chaotic parameter sets above MLE=0.2
+[2026-04-02 12:46:59] [INFO] [DEF]: Top 20 sorted descending by MLE:
+[2026-04-02 12:46:59] [INFO] [DEF]: []
+[2026-04-02 12:46:59] [INFO] [MET]: END Session 20

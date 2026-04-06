@@ -1,0 +1,13 @@
+{
+    "equation": {
+        "sigma": 10.0,
+        "rho": 28.0,
+        "beta": 2.6666666666666665
+    },
+    "simulation": {
+        "dt": 0.01,
+        "T_steps": 5000,
+        "N": 1,
+        "initial_conditions": [1.0, 1.0, 1.0]
+    }
+}

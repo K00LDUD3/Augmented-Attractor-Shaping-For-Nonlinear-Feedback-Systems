@@ -1,0 +1,3 @@
+[2026-04-02 02:03:12] [INFO] [MET]: START Session 16
+[2026-04-02 02:03:12] [INFO] [DEF]: Coupling mode: independent
+[2026-04-02 02:03:12] [INFO] [DEF]: Sweeping 7D parameter space, n_samples=10000

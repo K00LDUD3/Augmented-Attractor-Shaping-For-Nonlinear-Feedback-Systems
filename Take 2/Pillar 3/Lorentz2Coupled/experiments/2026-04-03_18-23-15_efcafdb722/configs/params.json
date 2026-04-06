@@ -1,0 +1,26 @@
+{
+    "equation": {
+        "sigma": 10.0,
+        "rho": 39,
+        "beta": 2.6666666666666665,
+        "K": 1.2
+    },
+    "simulation": {
+        "dt": 0.01,
+        "T_steps": 15000,
+        "N": 2,
+        "transient_drop_factor": 0.2,
+        "initial_conditions": [
+            [
+                1.0,
+                1.0,
+                1.0
+            ],
+            [
+                1.5,
+                1.5,
+                1.5
+            ]
+        ]
+    }
+}

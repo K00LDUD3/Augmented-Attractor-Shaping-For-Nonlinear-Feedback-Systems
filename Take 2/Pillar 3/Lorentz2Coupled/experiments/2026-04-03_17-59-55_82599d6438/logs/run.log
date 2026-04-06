@@ -1,0 +1,9 @@
+[2026-04-03 17:59:55] [INFO] [MET]: START Session 1
+[2026-04-03 17:59:55] [INFO] [BEG]: Simulation started.
+[2026-04-03 17:59:55] [INFO] [DEF]: Run UID: 2026-04-03_17-59-55_82599d6438
+[2026-04-03 17:59:55] [INFO] [DEF]: Integrating with scipy.integrate.solve_ivp (RK45)...
+[2026-04-03 17:59:55] [INFO] [DEF]: Dropping first 2000 frames (20.0%) as transient...
+[2026-04-03 17:59:55] [INFO] [DEF]: Integration complete.
+[2026-04-03 17:59:55] [INFO] [DEF]: Saving data to states.npz...
+[2026-04-03 17:59:55] [INFO] [FIN]: Data saved successfully.
+[2026-04-03 17:59:55] [INFO] [MET]: END Session 1

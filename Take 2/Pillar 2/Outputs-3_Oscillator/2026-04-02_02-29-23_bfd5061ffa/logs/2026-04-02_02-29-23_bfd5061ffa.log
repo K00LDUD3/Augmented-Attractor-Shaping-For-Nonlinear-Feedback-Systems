@@ -1,0 +1,7 @@
+[2026-04-02 02:29:23] [INFO] [MET]: START Session 19
+[2026-04-02 02:29:23] [INFO] [DEF]: Coupling mode: independent
+[2026-04-02 02:29:23] [INFO] [DEF]: Sweeping 7D parameter space, n_samples=20000
+[2026-04-02 06:03:31] [INFO] [DEF]: Found 0 chaotic parameter sets above MLE=0.2
+[2026-04-02 06:03:31] [INFO] [DEF]: Top 20 sorted descending by MLE:
+[2026-04-02 06:03:31] [INFO] [DEF]: []
+[2026-04-02 06:03:32] [INFO] [MET]: END Session 19

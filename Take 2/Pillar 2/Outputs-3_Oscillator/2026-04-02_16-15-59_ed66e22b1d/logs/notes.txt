@@ -1,0 +1,1 @@
+SIM: Trying handwritten value, increased transient_drop_factor

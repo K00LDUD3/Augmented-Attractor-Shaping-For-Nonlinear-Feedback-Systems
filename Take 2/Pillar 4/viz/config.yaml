@@ -1,0 +1,15 @@
+render:
+  step: 5            # Render faster for 4000 steps
+  trail_length: 10
+  fps: 60
+
+view:
+  distance: 80
+  elevation: 30
+
+style:
+  line_width: 3
+
+video:
+  save: true
+  filename: "baseline_pure_pid.mp4"

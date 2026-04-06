@@ -1,0 +1,15 @@
+render:
+  step: 4            # Subsample by 4. dt=0.005 -> 0.02 sec simulated per frame
+  trail_length: 10
+  fps: 50            # 50 fps * 0.02 sec/frame = 1.0x Real-Time Speed exactly.
+
+view:
+  distance: 80
+  elevation: 30
+
+style:
+  line_width: 3
+
+video:
+  save: true
+  filename: "stress_test_1x.mp4"
