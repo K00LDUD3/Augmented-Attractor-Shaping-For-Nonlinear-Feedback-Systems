@@ -17,7 +17,7 @@ def main():
     print(f"Starting Stress Test: {num_runs} randomized runs.")
     
     # Load Ideal Gains
-    with open('ideal_pid_gains.json', 'r') as f:
+    with open("D:\\Repos\\Augmented-Attractor-Shaping-For-Nonlinear-Feedback-Systems\\Take 2\\Pillar 4\\ideal_pid_gains.json", 'r') as f:
         best = json.load(f)
     Kp, Ki, Kd = best['Kp'], best['Ki'], best['Kd']
     
@@ -37,6 +37,12 @@ def main():
     
     target_state = np.zeros(6)
     summary_metrics = []
+    gain_values = {
+        "kp": Kp,
+        "ki": Ki,
+        "kd": Kd
+    }
+    # summary_metrics.append(gain_values)
     
     for i, state0 in enumerate(initial_states):
         print(f"\n--- Running [{i+1}/{num_runs}] ---")
@@ -108,6 +114,9 @@ def main():
     overshoots = [m['max_overshoot'] for m in summary_metrics]
     
     stats_summary = {
+        "kp":Kp,
+        "ki":Ki,
+        "kd":Kd,
         "batch_size": num_runs,
         "averages": {
             "effort": float(np.mean(efforts)),

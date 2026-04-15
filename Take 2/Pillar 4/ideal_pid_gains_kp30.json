@@ -2,7 +2,7 @@
     "Kp": 30.0,
     "Ki": 0.028641224628840715,
     "Kd": 0.0,
-    "avg_cost": 17908.455751591137,
+    "avg_cost": 30.643070952108626,
     "test_states_count": 40,
     "system_params": {
         "sigma": 10.0,
