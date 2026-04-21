@@ -17,7 +17,9 @@ def main():
     print(f"Starting Stress Test: {num_runs} randomized runs.")
     
     # Load Ideal Gains
-    with open("D:\\Repos\\Augmented-Attractor-Shaping-For-Nonlinear-Feedback-Systems\\Take 2\\Pillar 4\\ideal_pid_gains.json", 'r') as f:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    ideal_gains_path = os.path.join(current_dir, "ideal_pid_gains.json")
+    with open(ideal_gains_path, 'r') as f:
         best = json.load(f)
     Kp, Ki, Kd = best['Kp'], best['Ki'], best['Kd']
     
