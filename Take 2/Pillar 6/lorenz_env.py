@@ -23,6 +23,8 @@ from gymnasium import spaces
 import os
 import json
 
+from train_cassm_encoder import SSMEncoder
+
 
 # ---------------------------------------------------------------------------
 # v4 GALI Surrogate Architecture (frozen, inference-only)
@@ -214,11 +216,12 @@ class CoupledLorenzHybridEnv(gym.Env):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self._load_surrogate(surrogate_path)
+        self._load_cassm()
 
         # --- Gymnasium spaces ---
-        # Observation: [state/40, u_pid/u_max, log_gali_norm]
+        # Observation: [xi_1, xi_2, xi_dot_1, xi_dot_2, u_pid/u_max, log_gali_norm]
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(9,), dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
         )
         # Action: residual nudge in [-1, 1] for y1, y2
         self.action_space = spaces.Box(
@@ -230,6 +233,7 @@ class CoupledLorenzHybridEnv(gym.Env):
         self.step_count = 0
         self.current_rl_action = np.zeros(2)
         self.last_rl_action = np.zeros(2)
+        self.last_xi = np.zeros(2)
 
         # --- Per-episode accumulators (for metric logging) ---
         self.episode_total_effort = 0.0
@@ -250,6 +254,36 @@ class CoupledLorenzHybridEnv(gym.Env):
         self.sali_min = checkpoint['sali_min']
         self.sali_max = checkpoint['sali_max']
 
+    def _load_cassm(self):
+        """Load the frozen caSSM encoder."""
+        batch_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "6d_cassm_batch")
+        
+        # Find latest cassm_encoder.pth
+        latest_model = None
+        latest_time = 0
+        if os.path.exists(batch_dir):
+            for run_dir in os.listdir(batch_dir):
+                model_path = os.path.join(batch_dir, run_dir, "data", "cassm_encoder.pth")
+                if os.path.exists(model_path):
+                    mtime = os.path.getmtime(model_path)
+                    if mtime > latest_time:
+                        latest_time = mtime
+                        latest_model = model_path
+        
+        if latest_model is None:
+            raise FileNotFoundError(f"Could not find cassm_encoder.pth in {batch_dir}")
+            
+        checkpoint = torch.load(latest_model, map_location=self.device, weights_only=False)
+        params = checkpoint.get("params", {})
+        latent_dim = params.get("latent_dim", 2)
+        hidden_dim = params.get("hidden_dim", 256)
+        
+        self.encoder = SSMEncoder(input_dim=6, hidden_dim=hidden_dim, latent_dim=latent_dim).to(self.device)
+        self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
+        self.encoder.eval()
+        for p in self.encoder.parameters():
+            p.requires_grad = False
+
     def _query_gali(self, state_6d):
         """Query the surrogate for log10(GALI2) and return normalised value."""
         with torch.no_grad():
@@ -263,14 +297,21 @@ class CoupledLorenzHybridEnv(gym.Env):
         return log_gali, log_gali_norm
 
     def _build_obs(self, state, u_pid, log_gali_norm):
-        """Construct the 9D observation vector."""
+        """Construct the 7D observation vector."""
+        # Project state to latent manifold
+        with torch.no_grad():
+            x = torch.tensor(state / self.state_bound, dtype=torch.float32).unsqueeze(0).to(self.device)
+            xi = self.encoder(x).cpu().numpy().flatten()
+            
+        # Finite difference for velocity
+        xi_dot = (xi - self.last_xi) / self.dt
+        self.last_xi = xi.copy()
+
         return np.array([
-            state[0] / self.state_bound,
-            state[1] / self.state_bound,
-            state[2] / self.state_bound,
-            state[3] / self.state_bound,
-            state[4] / self.state_bound,
-            state[5] / self.state_bound,
+            xi[0],
+            xi[1],
+            xi_dot[0],
+            xi_dot[1],
             u_pid[0] / self.u_max,
             u_pid[1] / self.u_max,
             log_gali_norm,
@@ -296,10 +337,11 @@ class CoupledLorenzHybridEnv(gym.Env):
         u_norm = np.sum(np.abs(u_total)) / (len(u_total) * self.u_max)
         r_effort = -self.reward_effort_coeff * u_norm
 
-        # 3. GALI bonus: map log_gali from [sali_min, 0] -> [0, 1]
-        gali_normalised = (log_gali_next - self.sali_min) / (0.0 - self.sali_min + 1e-8)
-        gali_normalised = np.clip(gali_normalised, 0.0, 1.0)
-        r_gali = self.reward_gali_coeff * gali_normalised
+        # 3. GALI Log-Barrier Penalty
+        # Distance to chaos (0 = at boundary or deeper, >0 = stable)
+        distance_to_chaos = max(log_gali_next - self.sali_min, 0.0)
+        # Apply clamped inverse log-barrier
+        r_stability = -self.reward_gali_coeff * (1.0 / (distance_to_chaos + 1e-3))
 
         # 4. Convergence bonus (per-step when within threshold)
         r_conv = self.reward_convergence_bonus if dist < self.convergence_threshold else 0.0
@@ -311,7 +353,7 @@ class CoupledLorenzHybridEnv(gym.Env):
         delta_u = self.current_rl_action - self.last_rl_action
         r_deriv = -self.reward_action_deriv_coeff * np.sum(np.square(delta_u))
 
-        return r_dist + r_effort + r_gali + r_conv + r_sparsity + r_deriv
+        return r_dist + r_effort + r_stability + r_conv + r_sparsity + r_deriv
 
     def reset(self, seed=None, options=None):
         """Reset the environment with a random initial condition from [-init_bound, init_bound]^6."""
@@ -347,6 +389,11 @@ class CoupledLorenzHybridEnv(gym.Env):
         # (PID state was just set, we actually want a "clean" observation)
         self.pid1.reset()
         self.pid2.reset()
+
+        # Initialize last_xi so initial xi_dot is 0
+        with torch.no_grad():
+            x0 = torch.tensor(self.state / self.state_bound, dtype=torch.float32).unsqueeze(0).to(self.device)
+            self.last_xi = self.encoder(x0).cpu().numpy().flatten()
 
         _, log_gali_norm = self._query_gali(self.state)
         obs = self._build_obs(self.state, np.zeros(2), log_gali_norm)
@@ -447,7 +494,7 @@ class CoupledLorenzHybridEnv(gym.Env):
         """Return a dictionary of all environment parameters for experiment logging."""
         return {
             "env_type": "CoupledLorenzHybridEnv",
-            "observation_dim": 9,
+            "observation_dim": 7,
             "action_dim": 2,
             "episode_length": self.episode_length,
             "dt": self.dt,
@@ -484,7 +531,6 @@ class CoupledLorenzHybridEnv(gym.Env):
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import sys
-    sys.path.append(r"C:\CustomTools")
 
     SURROGATE_PATH = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "..",

@@ -15,7 +15,6 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), 'Pillar 4')))
 from baseline_pid_lorenz2 import CoupledLorenzEnv, PIDController
 
 # Standard Experiment Tracker path
-sys.path.append(r"C:\CustomTools")
 from ExperimentTracker import ExperimentTracker
 
 def render_trajectory(history_states, history_t, output_path, title="AAS Stress Test"):

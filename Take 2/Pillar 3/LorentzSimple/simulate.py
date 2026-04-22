@@ -5,7 +5,6 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 # Add CustomTools to path
-sys.path.append(r"C:\CustomTools")
 from ExperimentTracker import ExperimentTracker
 from Logger import Logger
 

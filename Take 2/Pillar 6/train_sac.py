@@ -25,7 +25,6 @@ import time
 import argparse
 from datetime import datetime
 
-sys.path.append(r"C:\CustomTools")
 from ExperimentTracker import ExperimentTracker
 from Logger import Logger
 
@@ -118,12 +117,22 @@ def get_variant_config(variant):
 
 def generate_lhs_ics(n_samples, dim=6, bounds=(-40.0, 40.0), seed=42):
     """
-    Generate a fixed set of initial conditions using Latin Hypercube Sampling.
-    Returns an (n_samples, dim) array of ICs uniformly filling the 6D hypercube.
+    Generate a fixed set of initial conditions on the SURFACE of the 6D hypercube
+    using Latin Hypercube Sampling for the interior coordinates.
     """
     from scipy.stats import qmc
+    import numpy as np
+    
     sampler = qmc.LatinHypercube(d=dim, seed=seed)
     unit_samples = sampler.random(n=n_samples)  # [0, 1]^d
+    
+    # Snap each sample to a random face (surface of the hypercube)
+    np.random.seed(seed)
+    for i in range(n_samples):
+        face_dim = np.random.randint(0, dim)
+        face_side = np.random.randint(0, 2)
+        unit_samples[i, face_dim] = float(face_side)
+        
     lo, hi = bounds
     ics = lo + unit_samples * (hi - lo)          # scale to [lo, hi]^d
     return ics
@@ -158,7 +167,7 @@ def create_env(params, variant_config):
         original_build = env._build_obs
         def masked_build(state, u_pid, log_gali_norm):
             obs = original_build(state, u_pid, log_gali_norm)
-            obs[8] = 0.0  # Zero out the GALI dimension
+            obs[6] = 0.0  # Zero out the GALI dimension (index 6 in 7D obs)
             return obs
         env._build_obs = masked_build
 
@@ -262,8 +271,8 @@ def run_pid_baseline_stress_test(baseline_ics, params, variant_config, logger, r
     import multiprocessing
 
     n_episodes = len(baseline_ics)
-    # n_workers = min(multiprocessing.cpu_count(), 8)
-    n_workers = max(multiprocessing.cpu_count()-1,1)
+    n_workers = min(multiprocessing.cpu_count(), 8)
+    # n_workers = max(multiprocessing.cpu_count()-1,1)
 
     logger.log(f"=" * 60, tag="DEF", level="INFO")
     logger.log(f"PID BASELINE STRESS TEST ({n_episodes} ICs, {n_workers} workers)", tag="DEF", level="INFO")
@@ -372,6 +381,7 @@ def train(params):
         "variant_config": variant_config,
         "surrogate_path": SURROGATE_PATH,
         "pid_gains_path": PID_GAINS_PATH,
+        "baseline_run_path": params.get("baseline_run_path", None),
     }
 
     run = tracker.create_run(
@@ -399,7 +409,7 @@ def train(params):
         env = create_env(params, variant_config)
         eval_env = create_env(params, variant_config)
 
-        obs_dim = env.observation_space.shape[0]  # 9
+        obs_dim = env.observation_space.shape[0]
         act_dim = env.action_space.shape[0]        # 2
 
         logger.log(f"Obs dim: {obs_dim}, Act dim: {act_dim}", tag="DEF", level="INFO")
@@ -425,33 +435,68 @@ def train(params):
         # --- Replay Buffer ---
         buffer = ReplayBuffer(obs_dim, act_dim, max_size=params["replay_buffer_size"])
 
-        # --- Generate Fixed LHS Initial Conditions ---
-        n_baseline_ics = params.get("baseline_stress_n", 250)
-        n_eval_ics = params["eval_episodes"]
-        n_master_ics = max(n_baseline_ics, n_eval_ics)
-        
-        logger.log(f"Generating {n_master_ics} fixed LHS initial conditions...", tag="DEF", level="INFO")
-        master_ics = generate_lhs_ics(
-            n_samples=n_master_ics, 
-            bounds=(-params["init_bound"], params["init_bound"])
-        )
-        
-        # Save master ICs to disk for reproducibility
-        with open(run.get_path("logs/master_fixed_ics.json"), "w") as f:
-            json.dump({"master_ics": master_ics.tolist()}, f, indent=2)
+        # --- Load Pre-computed ICs & Baseline ---
+        baseline_run_path = params["baseline_run_path"]
+        if baseline_run_path is None:
+            raise ValueError(
+                "--baseline-run is required. Run run_baseline_stress_test.py first, "
+                "then pass the run directory path."
+            )
 
-        # Baseline gets the full set, training evals get a consistent subset
-        baseline_ics = master_ics[:n_baseline_ics]
+        ic_path = os.path.join(baseline_run_path, "logs", "master_fixed_ics.json")
+        baseline_path = os.path.join(baseline_run_path, "logs", "pid_baseline.json")
+
+        if not os.path.exists(ic_path):
+            raise FileNotFoundError(f"IC file not found: {ic_path}")
+        if not os.path.exists(baseline_path):
+            raise FileNotFoundError(f"Baseline file not found: {baseline_path}")
+
+        # Load ICs
+        with open(ic_path, "r") as f:
+            ic_data = json.load(f)
+        master_ics = np.array(ic_data["master_ics"])
+
+        # Load baseline
+        with open(baseline_path, "r") as f:
+            baseline_data = json.load(f)
+        baseline = baseline_data["summary"]
+
+        n_eval_ics = params["eval_episodes"]
         eval_ics = master_ics[:n_eval_ics]
 
-        # --- PID Baseline Stress Test ---
-        baseline = run_pid_baseline_stress_test(
-            baseline_ics=baseline_ics,
-            params=params,
-            variant_config=variant_config,
-            logger=logger,
-            run=run,
-        )
+        # Save a copy of the ICs into this run for traceability
+        with open(run.get_path("logs/master_fixed_ics.json"), "w") as f:
+            json.dump(ic_data, f, indent=2)
+
+        # --- Log Baseline Reference ---
+        logger.log(f"=" * 60, tag="DEF", level="INFO")
+        logger.log(f"LOADED PRE-COMPUTED PID BASELINE", tag="DEF", level="INFO")
+        logger.log(f"  Source: {baseline_run_path}", tag="DEF", level="INFO")
+        logger.log(f"  ICs loaded: {len(master_ics)} (eval subset: {n_eval_ics})", tag="DEF", level="INFO")
+        logger.log(f"  IC strategy: {ic_data.get('strategy', 'unknown')}, seed: {ic_data.get('seed', 'unknown')}", tag="DEF", level="INFO")
+        logger.log(f"  Baseline wall time: {baseline.get('wall_time_sec', '?')}s", tag="DEF", level="INFO")
+        logger.log(f"  Diverged:      {baseline.get('n_diverged', '?')}/{baseline.get('n_episodes', '?')}", tag="DEF", level="INFO")
+        logger.log(f"  Effort:        mean={baseline['effort']['mean']:.1f}  "
+                   f"std={baseline['effort']['std']:.1f}  "
+                   f"median={baseline['effort']['median']:.1f}  "
+                   f"[{baseline['effort']['min']:.1f}, {baseline['effort']['max']:.1f}]",
+                   tag="DEF", level="INFO")
+        logger.log(f"  Final Error:   mean={baseline['error']['mean']:.6f}  "
+                   f"std={baseline['error']['std']:.6f}  "
+                   f"median={baseline['error']['median']:.6f}",
+                   tag="DEF", level="INFO")
+        logger.log(f"  ITWAE:         mean={baseline['itwae']['mean']:.2f}  "
+                   f"std={baseline['itwae']['std']:.2f}  "
+                   f"median={baseline['itwae']['median']:.2f}",
+                   tag="DEF", level="INFO")
+        logger.log(f"  Reward:        mean={baseline['reward']['mean']:.1f}  "
+                   f"median={baseline['reward']['median']:.1f}",
+                   tag="DEF", level="INFO")
+        if baseline.get('convergence_step', {}).get('mean') is not None:
+            logger.log(f"  Conv Step:     mean={baseline['convergence_step']['mean']:.0f}  "
+                       f"median={baseline['convergence_step']['median']:.0f}",
+                       tag="DEF", level="INFO")
+        logger.log(f"=" * 60, tag="DEF", level="INFO")
 
         # --- Training State ---
         total_steps = 0
@@ -622,6 +667,9 @@ def train(params):
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SAC Training for Hybrid PID-RL Chaos Control")
+    parser.add_argument("--baseline-run", type=str, required=True,
+                        help="Path to IC_basePID_stresstest_batch run directory containing "
+                             "logs/master_fixed_ics.json and logs/pid_baseline.json")
     parser.add_argument("--variant", type=str, default="6c", choices=["6a", "6b", "6c"],
                         help="Experiment variant: 6a=GALI obs, 6b=GALI reward, 6c=both")
     parser.add_argument("--episodes", type=int, default=None,
@@ -632,14 +680,13 @@ if __name__ == "__main__":
                         help="Override RL scaling factor")
     parser.add_argument("--eval-interval", type=int, default=None,
                         help="Override eval interval")
-    parser.add_argument("--baseline-stress-n", type=int, default=None,
-                        help="Override number of ICs in PID baseline stress test")
     parser.add_argument("--eval-episodes", type=int, default=None,
                         help="Override number of eval episodes")
     args = parser.parse_args()
 
     params = DEFAULT_PARAMS.copy()
     params["variant"] = args.variant
+    params["baseline_run_path"] = os.path.abspath(args.baseline_run)
     if args.episodes is not None:
         params["total_episodes"] = args.episodes
     if args.freq_ratio is not None:
@@ -648,8 +695,6 @@ if __name__ == "__main__":
         params["rl_lambda"] = args.rl_lambda
     if args.eval_interval is not None:
         params["eval_interval"] = args.eval_interval
-    if args.baseline_stress_n is not None:
-        params["baseline_stress_n"] = args.baseline_stress_n
     if args.eval_episodes is not None:
         params["eval_episodes"] = args.eval_episodes
 

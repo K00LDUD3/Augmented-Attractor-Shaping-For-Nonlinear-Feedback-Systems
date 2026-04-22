@@ -5,7 +5,6 @@ import json
 from datetime import datetime
 
 # Import custom tools
-sys.path.append(r"C:\CustomTools")
 from ExperimentTracker import ExperimentTracker
 from Logger import Logger
 

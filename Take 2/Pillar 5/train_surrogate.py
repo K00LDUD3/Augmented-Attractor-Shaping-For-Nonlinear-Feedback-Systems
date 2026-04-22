@@ -18,7 +18,6 @@ import pandas as pd
 from tqdm import tqdm
 import argparse
 
-sys.path.append(r"C:\CustomTools")
 from ExperimentTracker import ExperimentTracker
 
 class SALISurrogate(nn.Module):

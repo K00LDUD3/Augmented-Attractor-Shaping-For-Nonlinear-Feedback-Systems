@@ -5,7 +5,6 @@ import numpy as np
 import subprocess
 from scipy.stats import qmc
 
-sys.path.append(r"C:\CustomTools")
 from ExperimentTracker import ExperimentTracker
 
 from baseline_pid_lorenz2 import CoupledLorenzEnv, PIDController

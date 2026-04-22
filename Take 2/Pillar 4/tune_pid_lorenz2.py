@@ -7,7 +7,6 @@ from scipy.stats import qmc
 from typing import List
 
 # Import tracking infrastructure
-sys.path.append(r"C:\CustomTools")
 from ExperimentTracker import ExperimentTracker
 
 # Import our baseline environment

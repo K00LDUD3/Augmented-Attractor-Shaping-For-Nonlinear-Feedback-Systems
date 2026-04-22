@@ -8,7 +8,6 @@ from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 import time
 
-sys.path.append(r"C:\CustomTools")
 from ExperimentTracker import ExperimentTracker
 
 # Lorenz system parameters (from Phase 2)
