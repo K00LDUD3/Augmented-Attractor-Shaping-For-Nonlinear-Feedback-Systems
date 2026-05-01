@@ -18,7 +18,7 @@ from sac_agent import SACAgent
 # --- Configuration Options ---
 ONLY_NUMERICS = False  # Set to True to skip all MP4/PNG generation and only export JSONs
 
-def find_latest_run(base_dir="Pillar 6"):
+def find_latest_run(base_dir="."):
     # Assuming standard variant paths 6a, 6b, 6c. We will just check all of them.
     search_path = os.path.join(base_dir, "*_batch", "*")
     runs = [d for d in glob.glob(search_path) if os.path.isdir(d) and os.path.exists(os.path.join(d, "logs", "summary.json"))]
@@ -66,16 +66,27 @@ def evaluate_run(run_dir, n_eval=50):
     
     # 1. Load configuration and fixed master ICs
     summary_path = os.path.join(run_dir, "logs", "summary.json")
-    with open(summary_path, 'r') as f:
-        summary = json.load(f)
+    params_path = os.path.join(run_dir, "configs", "params.json")
+    
+    if os.path.exists(summary_path):
+        with open(summary_path, 'r') as f:
+            summary = json.load(f)
+            variant = summary["variant"]
+    elif os.path.exists(params_path):
+        print(f"  [WARN] summary.json missing (run likely interrupted). Falling back to params.json.")
+        with open(params_path, 'r') as f:
+            run_params = json.load(f)
+            variant = run_params["variant"]
+    else:
+        raise FileNotFoundError(f"Neither summary.json nor params.json found in {run_dir}")
         
     master_ics_path = os.path.join(run_dir, "logs", "master_fixed_ics.json")
     with open(master_ics_path, 'r') as f:
         master_ics = np.array(json.load(f)["master_ics"])
         
     params = DEFAULT_PARAMS.copy()
-    params["variant"] = summary["variant"]
-    variant_config = get_variant_config(summary["variant"])
+    params["variant"] = variant
+    variant_config = get_variant_config(variant)
     
     # Usually evaluate operates on the first n_eval of the master_ics array.
     eval_ics = master_ics[:n_eval]
@@ -87,7 +98,7 @@ def evaluate_run(run_dir, n_eval=50):
     # Create dummy environment to initialize configs
     print("Loading Environment and SAC Agent...")
     env = create_env(params, variant_config)
-    env.episode_length = 2000  # Cutoff at 2000 timesteps natively based on user request
+    env.episode_length = 2000  # Match training episode length (10s at dt=0.005)
     
     obs_dim = env.observation_space.shape[0]
     act_dim = env.action_space.shape[0]
@@ -99,19 +110,31 @@ def evaluate_run(run_dir, n_eval=50):
         device="cpu"  # Force CPU inference for massive parallel deterministic results
     )
     
-    # 2. Load latest weights
-    ckpt_path = os.path.join(run_dir, "data", "checkpoints", "ckpt_best_model.pth")
-    # if best model isn't there, find latest
-    if not os.path.exists(ckpt_path):
+    # 2. Load best weights (train_sac saves best_model_reward.pth and best_model_error.pth)
+    ckpt_candidates = [
+        os.path.join(run_dir, "data", "best_model_reward.pth"),
+        os.path.join(run_dir, "data", "best_model_error.pth"),
+        os.path.join(run_dir, "data", "checkpoints", "ckpt_best_model.pth"),  # legacy
+    ]
+    ckpt_path = None
+    for candidate in ckpt_candidates:
+        if os.path.exists(candidate):
+            ckpt_path = candidate
+            break
+    # Fallback: find latest periodic checkpoint
+    if ckpt_path is None:
         ckpts = glob.glob(os.path.join(run_dir, "data", "checkpoints", "ckpt_ep*.pth"))
-        ckpt_path = max(ckpts, key=os.path.getctime)
+        if ckpts:
+            ckpt_path = max(ckpts, key=os.path.getctime)
+        else:
+            raise FileNotFoundError(f"No checkpoints found in {run_dir}/data/")
         
     print(f"Loading weights from {ckpt_path}")
     agent.load(ckpt_path, evaluate=True)
     
     print(f"\n--- Initiating EXHAUSTIVE Trajectory Resimulation ({n_eval} ICs) ---")
     
-    # We will simulate all 50 ICs. For each, we get RL metrics, RL path, PID metrics, PID path.
+    # We will simulate all n_eval ICs. For each, we get RL metrics, RL path, PID metrics, PID path.
     rl_metrics_list = []
     pid_metrics_list = []
     
@@ -121,9 +144,31 @@ def evaluate_run(run_dir, n_eval=50):
     rl_pids = []
     rl_totals = []
 
-    # Run sequentially (50 takes maybe 10 seconds total on CPU)
+    # --- Load cached PID trajectories if available ---
+    # Look for the baseline run referenced in the training run's params
+    pid_cache = None
+    pid_baseline_data = None
+    
+    params_path = os.path.join(run_dir, "configs", "params.json")
+    baseline_run_path = None
+    if os.path.exists(params_path):
+        with open(params_path, 'r') as f:
+            run_params = json.load(f)
+        baseline_run_path = run_params.get("baseline_run_path", None)
+
+    if baseline_run_path:
+        cache_path = os.path.join(baseline_run_path, "data", "pid_trajectory_cache.npz")
+        baseline_json = os.path.join(baseline_run_path, "logs", "pid_baseline.json")
+        if os.path.exists(cache_path):
+            pid_cache = np.load(cache_path)
+            print(f"[CACHE HIT] Loaded PID trajectory cache from:\n  {cache_path}")
+        if os.path.exists(baseline_json):
+            with open(baseline_json, 'r') as f:
+                pid_baseline_data = json.load(f)
+
+    # Run sequentially
     for idx, ic in enumerate(eval_ics):
-        # RL Trajectory
+        # RL Trajectory (always simulated fresh)
         rl_m, rl_p, rl_a, rl_pid, rl_tot = simulate_trajectory(env, agent=agent, initial_state=ic)
         rl_metrics_list.append(rl_m)
         rl_paths.append(rl_p)
@@ -131,20 +176,21 @@ def evaluate_run(run_dir, n_eval=50):
         rl_pids.append(rl_pid)
         rl_totals.append(rl_tot)
         
-        # Pure PID Trajectory
+        # PID Trajectory — ALWAYS simulate fresh.
+        # Cached baselines may have different episode_length, causing apples-to-oranges comparisons.
         pid_m, pid_p, _, _, _ = simulate_trajectory(env, agent=None, initial_state=ic)
         pid_metrics_list.append(pid_m)
         pid_paths.append(pid_p)
         
         # Comprehensive step-by-step logging
-        eff_p, eff_r = pid_m['total_effort'], rl_m['total_effort']
-        err_p, err_r = pid_m['final_error'], rl_m['final_error']
+        eff_p, eff_r = pid_metrics_list[-1]['total_effort'], rl_m['total_effort']
+        err_p, err_r = pid_metrics_list[-1]['final_error'], rl_m['final_error']
         diff = ((eff_r - eff_p) / eff_p) * 100 if eff_p != 0 else 0
         
         print(f"[IC {idx+1:02d}/{n_eval}] "
               f"Effort: RL={eff_r:7.1f} vs PID={eff_p:7.1f} ({diff:+.1f}%) | "
               f"Error: RL={err_r:.4f} vs PID={err_p:.4f} | "
-              f"ITWAE: RL={rl_m['itwae']:5.1f} vs PID={pid_m['itwae']:5.1f}")
+              f"ITWAE: RL={rl_m['itwae']:5.1f} vs PID={pid_metrics_list[-1]['itwae']:5.1f}")
 
     # Aggregating the stats
     def calc_stats(m_list, key):
@@ -181,7 +227,7 @@ def evaluate_run(run_dir, n_eval=50):
             }
         })
         
-    out_json_path = os.path.join(run_dir, "logs", "post_run_individual_metrics.json")
+    out_json_path = os.path.join(run_dir, "logs", "post_run_individual_metrics_del-13.1.json")
     with open(out_json_path, "w") as f:
         json.dump(individual_logs, f, indent=4)
     print(f"Individual metrics successfully exported to {out_json_path}")
@@ -299,8 +345,8 @@ def generate_3d_flight_paths(ics, rl_paths, pid_paths, rl_actions, rl_pids, rl_t
         line1_o1, = ax1.plot([], [], [], color='black', alpha=0.7, linewidth=1.5, label='O1 (PID)')
         line1_o2, = ax1.plot([], [], [], color='gray', alpha=0.5, linewidth=1.0, linestyle='--', label='O2 (PID)')
         
-        line2_o1, = ax2.plot([], [], [], color='blue', alpha=0.7, linewidth=1.5, label='O1 (RL)')
-        line2_o2, = ax2.plot([], [], [], color='cyan', alpha=0.5, linewidth=1.0, linestyle='--', label='O2 (RL)')
+        line2_o1, = ax2.plot([], [], [], color='black', alpha=0.7, linewidth=1.5, label='O1 (RL)')
+        line2_o2, = ax2.plot([], [], [], color='gray', alpha=0.5, linewidth=1.0, linestyle='--', label='O2 (RL)')
         
         ax1.legend()
         ax2.legend()
@@ -624,6 +670,20 @@ def export_numerical_diagnostics(ics, rl_paths, pid_paths, rl_actions, rl_pids, 
                     "PID": float(w_pid_sig),
                     "Hybrid": float(w_tot_sig),
                     "RL_Resid": float(w_rl_sig)
+                },
+                "State_Coords": {
+                    "PID": {
+                        "start": pid_trj[start_idx].tolist(),
+                        "mid": pid_trj[(start_idx + end_idx) // 2].tolist(),
+                        "end": pid_trj[end_idx - 1].tolist(),
+                        "mean_norm": float(np.mean(np.linalg.norm(pid_trj[start_idx:end_idx], axis=1)))
+                    },
+                    "RL": {
+                        "start": rl_trj[start_idx].tolist(),
+                        "mid": rl_trj[(start_idx + end_idx) // 2].tolist(),
+                        "end": rl_trj[end_idx - 1].tolist(),
+                        "mean_norm": float(np.mean(np.linalg.norm(rl_trj[start_idx:end_idx], axis=1)))
+                    }
                 }
             })
 
@@ -636,7 +696,7 @@ def export_numerical_diagnostics(ics, rl_paths, pid_paths, rl_actions, rl_pids, 
             "One_Second_Intervals": intervals
         }
         
-        with open(os.path.join(num_dir, f"numerical_ic_{i+1:02d}_summary.json"), 'w') as f:
+        with open(os.path.join(num_dir, f"numerical_ic_{i+1:02d}_summary_del-13.1.json"), 'w') as f:
             json.dump(data, f, indent=4)
 
 if __name__ == "__main__":

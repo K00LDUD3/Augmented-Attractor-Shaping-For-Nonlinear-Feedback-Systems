@@ -69,18 +69,20 @@ BATCH_DIR = os.path.join(PILLAR_DIR, "IC_basePID_stresstest_batch")
 ENV_PARAMS = {
     "variant": "6c",
     "dt": 0.005,
-    "episode_length": 4000,
-    "rl_lambda": 25.0,
+    "episode_length": 2000,     # Delta 13.3: 10s at dt=0.005 (matches training)
+    "rl_lambda": 50.0,
     "u_max": 250.0,
     "freq_ratio": 10,
     "state_bound": 40.0,
     "init_bound": 40.0,
+    "attractor_radius": 30.0,
     "reward_distance_coeff": 5.0,
-    "reward_effort_coeff": 20.0,
+    "reward_effort_coeff": 30.0,
     "reward_gali_coeff": 0.1,
     "reward_convergence_bonus": 1.0,
     "reward_sparsity_coeff": 0.1,
-    "reward_action_deriv_coeff": 1.0,
+    "reward_action_deriv_coeff": 0.1,
+    "reward_surf_coeff": 0.3,
     "convergence_threshold": 0.5,
 }
 
@@ -131,7 +133,9 @@ def create_env(params, variant_config):
         reward_effort_coeff=params["reward_effort_coeff"],
         reward_gali_coeff=gali_coeff,
         reward_convergence_bonus=params["reward_convergence_bonus"],
+        reward_surf_coeff=params["reward_surf_coeff"],
         convergence_threshold=params["convergence_threshold"],
+        attractor_radius=params["attractor_radius"],
         state_bound=params["state_bound"],
         init_bound=params["init_bound"],
     )
@@ -142,7 +146,7 @@ def create_env(params, variant_config):
         original_build = env._build_obs
         def masked_build(state, u_pid, log_gali_norm):
             obs = original_build(state, u_pid, log_gali_norm)
-            obs[6] = 0.0
+            obs[-1] = 0.0  # Zero out the GALI dimension (always last element)
             return obs
         env._build_obs = masked_build
 
@@ -157,6 +161,7 @@ def _baseline_worker(args):
     Worker function for parallel PID baseline.
     Must be top-level (not nested) so it's picklable by multiprocessing.
     Each worker creates its own env instance with its own surrogate copy.
+    Records full state trajectories, PID actions, and total control signals.
     """
     os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
     os.environ["FORCE_CPU_SURROGATE"] = "1"  # Bypass torch CUDA init entirely
@@ -173,10 +178,20 @@ def _baseline_worker(args):
         done = False
         ep_reward = 0.0
 
+        # Exhaustive per-step recording
+        trajectory = [ic.copy()]
+        pid_actions = []
+        total_actions = []
+
         while not done:
             obs, reward, terminated, truncated, step_info = env.step(zero_action)
             ep_reward += reward
             done = terminated or truncated
+
+            trajectory.append(env.state.copy())
+            if "u_pid" in step_info:
+                pid_actions.append(step_info["u_pid"])
+                total_actions.append(step_info["u_total"])
 
         m = step_info.get("episode_metrics", {})
         result = {
@@ -189,6 +204,10 @@ def _baseline_worker(args):
             "convergence_step": m.get("convergence_step", None),
             "max_overshoot": float(m.get("max_overshoot", 0)),
             "diverged": m.get("diverged", False),
+            # Exhaustive trajectory data (numpy arrays)
+            "_trajectory": np.array(trajectory),
+            "_pid_actions": np.array(pid_actions) if pid_actions else np.zeros((0, 2)),
+            "_total_actions": np.array(total_actions) if total_actions else np.zeros((0, 2)),
         }
         results.append(result)
 
@@ -218,7 +237,7 @@ def main():
 
     run = tracker.create_run(
         params=run_params,
-        notes=f"Standalone PID Baseline Stress Test | {args.n_ics} surface ICs (seed={args.seed})"
+        notes=f"PID Baseline Stress Test (2000 steps / 10s) | {args.n_ics} surface ICs (seed={args.seed}) | Delta 13.3+"
     )
 
     # --- Logger ---
@@ -342,10 +361,31 @@ def main():
                        tag="DEF", level="INFO")
         logger.log(f"=" * 60, tag="DEF", level="INFO")
 
-        # --- Save ---
+        # --- Save JSON (summary metrics only, no numpy arrays) ---
+        json_results = []
+        for r in results:
+            json_r = {k: v for k, v in r.items() if not k.startswith("_")}
+            json_results.append(json_r)
+
         with open(run.get_path("logs/pid_baseline.json"), "w") as f:
-            json.dump({"summary": baseline_summary, "episodes": results}, f, indent=2, cls=NumpyEncoder)
+            json.dump({"summary": baseline_summary, "episodes": json_results}, f, indent=2, cls=NumpyEncoder)
         logger.log("PID baseline results saved to logs/pid_baseline.json", tag="PAT", level="INFO")
+
+        # --- Save exhaustive trajectory cache (.npz) ---
+        # This is the full per-step data that post_run_analysis.py needs.
+        # Keyed by IC index: trajectories_000, pid_actions_000, total_actions_000, ...
+        traj_cache = {}
+        for r in results:
+            idx = r["ic_index"]
+            traj_cache[f"trajectories_{idx:03d}"] = r["_trajectory"]
+            traj_cache[f"pid_actions_{idx:03d}"] = r["_pid_actions"]
+            traj_cache[f"total_actions_{idx:03d}"] = r["_total_actions"]
+        traj_cache["n_ics"] = np.array([len(results)])
+
+        npz_path = run.get_path("data/pid_trajectory_cache.npz")
+        np.savez_compressed(npz_path, **traj_cache)
+        cache_size_mb = os.path.getsize(npz_path) / (1024 * 1024)
+        logger.log(f"Trajectory cache saved to data/pid_trajectory_cache.npz ({cache_size_mb:.1f} MB)", tag="PAT", level="INFO")
 
         run.add_notes(
             f"Completed {n_episodes} IC baseline. "

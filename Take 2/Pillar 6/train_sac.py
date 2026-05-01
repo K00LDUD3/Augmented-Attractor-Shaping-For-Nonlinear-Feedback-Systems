@@ -14,6 +14,8 @@ Usage:
     python train_sac.py --episodes 500 --variant 6b   # GALI reward only
 """
 
+TEST_RUN = True
+
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -68,9 +70,9 @@ DEFAULT_PARAMS = {
     "variant": "6c",            # 6a = GALI obs only, 6b = GALI reward only, 6c = both
 
     # --- Training ---
-    "total_episodes": 500,
-    "episode_length": 4000,
-    "warmup_steps": 10_000,
+    "total_episodes": 1000,
+    "episode_length": 2000,     # Delta 13.3: 10s at dt=0.005. Transient + meaningful post-convergence.
+    "warmup_steps": 8_000,      # Delta 13.3: Adjusted proportionally
     "batch_size": 256,
     "eval_interval": 10,        # Evaluate every N episodes
     "eval_episodes": 5,         # Number of eval episodes
@@ -88,19 +90,21 @@ DEFAULT_PARAMS = {
 
     # --- Environment ---
     "dt": 0.005,
-    "rl_lambda": 25.0,          # 10% of u_max — gives agent meaningful control authority
+    "rl_lambda": 50.0,          # Delta 13.1: 20% of u_max — doubled authority for meaningful effort reduction
     "u_max": 250.0,
     "freq_ratio": 10,           # DEC 7: Multi-timescale. PID at 500Hz, RL at 50Hz.
     "state_bound": 40.0,
-    "init_bound": 40.0,
+    "init_bound": 25.0,         # Delta 13: Train within attractor basin. Eval uses 40.
+    "attractor_radius": 30.0,   # Delta 13: Gate radius for surfing reward
 
     # --- Reward (all normalised to ~[-1, +1] per step) ---
     "reward_distance_coeff": 5.0,   # INCREASED: agent needs to care about tracking error.
-    "reward_effort_coeff": 20.0,    # INCREASED: r_effort = -coeff * L1(u_total)
+    "reward_effort_coeff": 10.0,    # Delta 15: moderate effort nudge in simplified 3-component reward
     "reward_gali_coeff": 0.1,       # r_gali = coeff * gali_norm -> [0, 0.1]
     "reward_convergence_bonus": 1.0, # r_conv = bonus when dist < threshold -> {0, 1.0}
     "reward_sparsity_coeff": 0.1,    # DECREASED: Agent was too scared to act, letting error blow up.
-    "reward_action_deriv_coeff": 1.0, # r_deriv = -coeff * L2(delta_u_rl)
+    "reward_action_deriv_coeff": 0.1, # Delta 13.1: DECREASED from 1.0 — was creating startup barrier preventing agent from acting
+    "reward_surf_coeff": 0.3,        # Delta 13: Manifold surfing penalty on ||xi_dot||^2
     "convergence_threshold": 0.5,
 }
 
@@ -154,7 +158,9 @@ def create_env(params, variant_config):
         reward_effort_coeff=params["reward_effort_coeff"],
         reward_gali_coeff=gali_coeff,
         reward_convergence_bonus=params["reward_convergence_bonus"],
+        reward_surf_coeff=params["reward_surf_coeff"],
         convergence_threshold=params["convergence_threshold"],
+        attractor_radius=params["attractor_radius"],
         state_bound=params["state_bound"],
         init_bound=params["init_bound"],
     )
@@ -167,7 +173,7 @@ def create_env(params, variant_config):
         original_build = env._build_obs
         def masked_build(state, u_pid, log_gali_norm):
             obs = original_build(state, u_pid, log_gali_norm)
-            obs[6] = 0.0  # Zero out the GALI dimension (index 6 in 7D obs)
+            obs[-1] = 0.0  # Zero out the GALI dimension (always last element)
             return obs
         env._build_obs = masked_build
 
@@ -383,10 +389,12 @@ def train(params):
         "pid_gains_path": PID_GAINS_PATH,
         "baseline_run_path": params.get("baseline_run_path", None),
     }
-
+    NOTES = f"SAC Hybrid PID-RL | Variant {variant.upper()}: {variant_config['label']}"
+    if TEST_RUN:
+        NOTES +=  f"{TEST_RUN=}"
     run = tracker.create_run(
         params=all_params,
-        notes=f"SAC Hybrid PID-RL | Variant {variant.upper()}: {variant_config['label']}"
+        notes=NOTES
     )
 
     # --- Logger ---
@@ -394,7 +402,8 @@ def train(params):
         f=run.get_path("logs/run.log"),
         sesh_file=run.get_path("logs/.sesh_num")
     )
-    print(f"Run powershell command to track log file live: \n\n\twatchlog \"{logger.f}\"\n")
+    print(f"Run powershell to track log file live: \n\n\twatchlog \"{logger.f}\"\n")
+    print(f"OR \n Linux to track log file live: \n\n\ttail -F -n +1 \"{logger.f}\"\n")
 
     # Copy this script for reproducibility
     run.copy_file(os.path.abspath(__file__), "configs/")
@@ -573,6 +582,7 @@ def train(params):
                 f"R={episode_reward:10.2f} | "
                 f"Err={ep_metrics.get('final_error', -1):8.4f} | "
                 f"Eff={ep_metrics.get('total_effort', -1):8.1f} | "
+                # f"RLEff={ep_metrics.get("total_rl_effort", None)} | "
                 f"a={avg_alpha:.4f} | "
                 f"Steps={total_steps}",
                 tag="DEF", level="INFO"

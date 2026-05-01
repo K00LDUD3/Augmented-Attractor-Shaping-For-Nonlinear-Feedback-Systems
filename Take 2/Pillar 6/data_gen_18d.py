@@ -30,7 +30,7 @@ T_MAX = 5.0  # Sufficient for transient convergence to manifold
 STEPS = 50
 
 PARAMS = {
-    "num_samples": 25000,
+    "num_samples": 50000,
     "t_max": T_MAX,
     "steps": STEPS,
     "method": "RK45",
@@ -84,9 +84,21 @@ def integrate_ca_ssm_sample(x0):
         sol = solve_ivp(coupled_lorenz_vm, (0, dt_step), state, method='RK45', rtol=1e-6, atol=1e-6)
         state = sol.y[:, -1]
         
-        # Fiber Alignment: Normalize tangents every step to prevent blowup
-        state[6:12] /= (np.linalg.norm(state[6:12]) + 1e-15)
-        state[12:18] /= (np.linalg.norm(state[12:18]) + 1e-15)
+        # Gram-Schmidt re-orthogonalization (prevents tangent collapse)
+        # w1: normalize
+        w1 = state[6:12]
+        w1_norm = np.linalg.norm(w1)
+        if w1_norm > 1e-15:
+            w1 = w1 / w1_norm
+        state[6:12] = w1
+        
+        # w2: subtract projection onto w1, then normalize
+        w2 = state[12:18]
+        w2 = w2 - np.dot(w2, w1) * w1  # Remove w1 component
+        w2_norm = np.linalg.norm(w2)
+        if w2_norm > 1e-15:
+            w2 = w2 / w2_norm
+        state[12:18] = w2
         
     return state.astype(np.float32)
 

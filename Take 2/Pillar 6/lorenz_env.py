@@ -6,10 +6,11 @@ Gymnasium-compatible environment for the 2-Coupled Lorenz system.
 Architecture:
     PID (Kp=30) provides coarse homing on y1, y2
     RL agent provides residual nudges scaled by lambda
-    v4 GALI surrogate provides stability observation & reward shaping
+    caSSM encoder provides manifold-aware latent observations
+    v4 GALI surrogate provides stability reward shaping (Log-Barrier)
 
-Observation (9D):
-    [x1, y1, z1, x2, y2, z2, u_pid_1, u_pid_2, log_gali_norm]
+Observation (7D):
+    [xi_1, xi_2, xi_dot_1, xi_dot_2, u_pid_1, u_pid_2, log_gali_norm]
 
 Action (2D):
     Continuous [-1, 1] -> scaled by lambda and added to PID output on y1, y2
@@ -126,11 +127,12 @@ class CoupledLorenzHybridEnv(gym.Env):
     GALI-Informed Hybrid PID-Residual RL environment for chaos control.
 
     The agent provides small residual nudges on top of a PID baseline
-    to steer the coupled Lorenz system toward the origin while avoiding
-    chaotic manifolds identified by the GALI surrogate.
+    to steer the coupled Lorenz system toward the origin while navigating
+    chaotic manifolds via the caSSM encoder and GALI surrogate.
 
-    Observation (9D):
-        [x1, y1, z1, x2, y2, z2,     # 6D physical state (normalised /40)
+    Observation (dynamic, depends on caSSM latent_dim):
+        [xi_1..xi_L,                   # L-D caSSM latent position
+         xi_dot_1..xi_dot_L,           # L-D latent velocity (finite diff)
          u_pid_1, u_pid_2,             # PID actions (normalised /u_max)
          log_gali_norm]                # GALI stability index (normalised)
 
@@ -161,7 +163,9 @@ class CoupledLorenzHybridEnv(gym.Env):
         reward_convergence_bonus: float = 10.0,
         reward_sparsity_coeff: float = 0.5,
         reward_action_deriv_coeff: float = 1.0,
+        reward_surf_coeff: float = 2.0,
         convergence_threshold: float = 0.5,
+        attractor_radius: float = 30.0,
         # Physics parameters
         sigma: float = 10.0,
         rho: float = 28.0,
@@ -189,7 +193,9 @@ class CoupledLorenzHybridEnv(gym.Env):
         self.reward_convergence_bonus = reward_convergence_bonus
         self.reward_sparsity_coeff = reward_sparsity_coeff
         self.reward_action_deriv_coeff = reward_action_deriv_coeff
+        self.reward_surf_coeff = reward_surf_coeff
         self.convergence_threshold = convergence_threshold
+        self.attractor_radius = attractor_radius
 
         # Target state
         self.target = np.zeros(6)
@@ -219,9 +225,10 @@ class CoupledLorenzHybridEnv(gym.Env):
         self._load_cassm()
 
         # --- Gymnasium spaces ---
-        # Observation: [xi_1, xi_2, xi_dot_1, xi_dot_2, u_pid/u_max, log_gali_norm]
+        # Observation: [xi, xi_dot, u_pid/u_max, log_gali_norm]
+        obs_dim = 2 * self.latent_dim + 2 + 1
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
         )
         # Action: residual nudge in [-1, 1] for y1, y2
         self.action_space = spaces.Box(
@@ -233,7 +240,8 @@ class CoupledLorenzHybridEnv(gym.Env):
         self.step_count = 0
         self.current_rl_action = np.zeros(2)
         self.last_rl_action = np.zeros(2)
-        self.last_xi = np.zeros(2)
+        self.last_xi = np.zeros(self.latent_dim)
+        self.current_xi_dot = np.zeros(self.latent_dim)  # For surfing reward
 
         # --- Per-episode accumulators (for metric logging) ---
         self.episode_total_effort = 0.0
@@ -278,6 +286,7 @@ class CoupledLorenzHybridEnv(gym.Env):
         latent_dim = params.get("latent_dim", 2)
         hidden_dim = params.get("hidden_dim", 256)
         
+        self.latent_dim = latent_dim
         self.encoder = SSMEncoder(input_dim=6, hidden_dim=hidden_dim, latent_dim=latent_dim).to(self.device)
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         self.encoder.eval()
@@ -297,7 +306,7 @@ class CoupledLorenzHybridEnv(gym.Env):
         return log_gali, log_gali_norm
 
     def _build_obs(self, state, u_pid, log_gali_norm):
-        """Construct the 7D observation vector."""
+        """Construct the dynamic observation vector."""
         # Project state to latent manifold
         with torch.no_grad():
             x = torch.tensor(state / self.state_bound, dtype=torch.float32).unsqueeze(0).to(self.device)
@@ -306,54 +315,36 @@ class CoupledLorenzHybridEnv(gym.Env):
         # Finite difference for velocity
         xi_dot = (xi - self.last_xi) / self.dt
         self.last_xi = xi.copy()
+        self.current_xi_dot = xi_dot.copy()  # Store for surfing reward
 
-        return np.array([
-            xi[0],
-            xi[1],
-            xi_dot[0],
-            xi_dot[1],
-            u_pid[0] / self.u_max,
-            u_pid[1] / self.u_max,
-            log_gali_norm,
-        ], dtype=np.float32)
+        return np.concatenate([
+            xi,
+            xi_dot,
+            u_pid / self.u_max,
+            np.array([log_gali_norm])
+        ]).astype(np.float32)
 
     def _compute_reward(self, state, next_state, u_total, log_gali_next):
         """
-        Four-component reward (ALL NORMALISED to ~[-1, +1]):
-            1. Distance to target (normalised by max possible distance)
-            2. Actuator effort penalty (normalised by u_max)
-            3. GALI stability bonus (already in [0, 1])
-            4. Convergence bonus (per-step, moderate)
+        Three-component reward (Delta 15 — simplified):
+            1. Distance to target (normalised)
+            2. Absolute effort penalty (L1)
+            3. Convergence bonus
         """
         dist = np.linalg.norm(next_state - self.target)
         max_dist = self.state_bound * np.sqrt(6)  # ~98 for bound=40
 
-        # 1. Normalised distance reward: maps [0, max_dist] -> [-1, 0]
+        # 1. Distance: maps [0, max_dist] -> [-1, 0], scaled by coeff
         r_dist = -self.reward_distance_coeff * (dist / max_dist)
 
-        # 2. Normalised effort penalty (L1 norm aligns with evaluation metric):
-        #    Penalty is linear, scaled by max possible effort per channel.
-        #    This fixes the 'vanishing gradient' for small effort values in L2 norm.
+        # 2. Effort penalty (absolute L1):
         u_norm = np.sum(np.abs(u_total)) / (len(u_total) * self.u_max)
         r_effort = -self.reward_effort_coeff * u_norm
 
-        # 3. GALI Log-Barrier Penalty
-        # Distance to chaos (0 = at boundary or deeper, >0 = stable)
-        distance_to_chaos = max(log_gali_next - self.sali_min, 0.0)
-        # Apply clamped inverse log-barrier
-        r_stability = -self.reward_gali_coeff * (1.0 / (distance_to_chaos + 1e-3))
-
-        # 4. Convergence bonus (per-step when within threshold)
+        # 3. Convergence bonus (per-step when within threshold)
         r_conv = self.reward_convergence_bonus if dist < self.convergence_threshold else 0.0
 
-        # 5. Residual Sparsity (Deadband penalty on the normalised action)
-        r_sparsity = -self.reward_sparsity_coeff * np.sum(np.square(self.current_rl_action))
-        
-        # 6. Action Derivative Penalty (Chatter suppression)
-        delta_u = self.current_rl_action - self.last_rl_action
-        r_deriv = -self.reward_action_deriv_coeff * np.sum(np.square(delta_u))
-
-        return r_dist + r_effort + r_stability + r_conv + r_sparsity + r_deriv
+        return r_dist + r_effort + r_conv
 
     def reset(self, seed=None, options=None):
         """Reset the environment with a random initial condition from [-init_bound, init_bound]^6."""
@@ -494,8 +485,9 @@ class CoupledLorenzHybridEnv(gym.Env):
         """Return a dictionary of all environment parameters for experiment logging."""
         return {
             "env_type": "CoupledLorenzHybridEnv",
-            "observation_dim": 7,
+            "observation_dim": self.observation_space.shape[0],
             "action_dim": 2,
+            "latent_dim": self.latent_dim,
             "episode_length": self.episode_length,
             "dt": self.dt,
             "freq_ratio": self.freq_ratio,
@@ -503,6 +495,7 @@ class CoupledLorenzHybridEnv(gym.Env):
             "u_max": self.u_max,
             "state_bound": self.state_bound,
             "init_bound": self.init_bound,
+            "attractor_radius": self.attractor_radius,
             "pid_gains": self.pid_gains,
             "reward_coefficients": {
                 "distance": self.reward_distance_coeff,
@@ -511,6 +504,7 @@ class CoupledLorenzHybridEnv(gym.Env):
                 "convergence_bonus": self.reward_convergence_bonus,
                 "sparsity": self.reward_sparsity_coeff,
                 "action_deriv": self.reward_action_deriv_coeff,
+                "surf": self.reward_surf_coeff,
                 "convergence_threshold": self.convergence_threshold,
             },
             "physics": {

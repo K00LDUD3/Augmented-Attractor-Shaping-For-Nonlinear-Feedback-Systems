@@ -194,3 +194,241 @@ The RL agent will navigate a reduced 4D latent space $(\xi, \dot{\xi})$ where th
 
 ### Expected Behavior
 The reward landscape is now mathematically protected against inversion bugs, meaning the agent cannot 'hack' the reward function by diving into unmapped regions. The finite-difference velocity calculation provides smooth trajectory tracking without exposing the policy network to encoder gradient noise.
+
+---
+
+## [2026-04-22 20:25] Delta 9: Log-Barrier Reward & Decoupled Baseline
+**Preceding Issue:** Inverse barrier reward was numerically fragile; PID baseline stress test was re-run every training session (5+ hours wasted per run).
+
+### Diagnosis
+1. **Inverse Barrier Instability:** The Delta 8.1 formula $r_{stability} = -\omega / (\text{dist} + \epsilon)$ was technically safe but provided **zero gradient** in stable regions and an extremely steep cliff near the boundary. The SAC critic struggled to learn the Q-function around this discontinuity.
+2. **Log-Barrier is Standard:** Per the Delta 9 design document, the recommended formulation is $r \sim \omega \cdot \log(\text{GALI} + \delta)$. Since our surrogate already outputs $\log_{10}(\text{GALI})$, we use it directly: `r_stability = coeff * max(log_gali, sali_min)`. This provides smooth, monotonic gradient from stable ($\approx 0$) through edge-of-chaos ($\approx -5$) to deep chaos ($\approx -11.5$).
+3. **Baseline Decoupling:** The 250-IC PID stress test took ~5.3 hours. Re-running it every SAC training session was unjustifiable. A standalone `run_baseline_stress_test.py` now generates ICs and baseline once; `train_sac.py` loads them via `--baseline-run`.
+
+### Code Changes
+- **Environment (`lorenz_env.py`)**:
+  - **Reward:** Replaced inverse barrier with direct log-barrier: `log_gali_clamped = max(log_gali, sali_min)` → `r_stability = coeff * log_gali_clamped`.
+  - **Docstrings:** Updated to reflect 7D observation space `[xi, xi_dot, u_pid, G_n]`.
+- **Training (`train_sac.py`)**:
+  - Removed inline IC generation and PID stress test execution.
+  - Added `--baseline-run` (required) to load pre-computed ICs and baseline from `IC_basePID_stresstest_batch/<RUN_UID>/`.
+  - Baseline summary stats and source path are logged for traceability.
+- **New Script (`run_baseline_stress_test.py`)**:
+  - Standalone script that generates 250 surface-snapped LHS ICs and runs the full PID baseline stress test once.
+  - Results saved to `IC_basePID_stresstest_batch/`.
+
+### Expected Behavior
+The log-barrier provides a smooth, everywhere-differentiable stability signal. The SAC critic can now learn a clean value function over the GALI landscape without fighting numerical cliffs. Training startup is instant (no 5-hour baseline wait), and all runs share the exact same ICs for rigorous comparison.
+
+---
+
+## [2026-04-29 01:55] Delta 10: caSSM Encoder — Inverse Density Weighting & Distribution Metrics
+**Preceding Issue:** The caSSM encoder treated all training samples equally, causing the model to over-learn the dense chaotic attractor regions while under-representing stable fibers near the origin. Training monitored only MSE, giving no insight into whether the reconstruction preserved the physical state distribution.
+
+### Diagnosis
+1. **Uniform Weighting Bias:** Chaotic trajectories densely populate specific attractor lobes, making them heavily overrepresented. Stable fiber states (near origin) are rare but critically important for the RL agent's control objective. Without density correction, the encoder's latent space is biased toward encoding chaos, not stability.
+2. **MSE is Insufficient:** MSE measures average per-sample error but does not capture whether the reconstruction preserves the full distribution shape. A model can achieve low MSE while completely mode-collapsing on rare state-space regions.
+3. **No Validation Split:** Previous runs trained on 100% of data with no held-out validation, making it impossible to detect overfitting.
+
+### Code Changes
+- **`train_cassm_encoder.py`**:
+  - **Inverse Density Weighting:** Ported `build_inv_density_weights()` from the v4 GALI surrogate. Applied per-sample `1/√(bin_count)` weights based on state-space L2 norm distribution. Samples near the origin (stable fibers) are upweighted; dense attractor lobe samples are downweighted.
+  - **JS Accuracy & Histogram Intersection:** Added `compute_reconstruction_distribution_accuracy()` — computes per-dimension JS divergence accuracy `(1 - JSD/ln2) * 100%` and histogram intersection `sum(min(P,Q)) * 100%`, averaged across all 6 state dimensions. Evaluated on validation set every 10 epochs.
+  - **Train/Val Split:** 90/10 split (seed=42) for proper generalization monitoring.
+  - **Best-Model Checkpointing:** Saves `cassm_encoder_best.pth` whenever validation JS accuracy improves.
+  - **Weighted MSE:** Reconstruction loss now uses per-sample inverse density weights: `loss = mean(w_i * ||x_rec - x||²)`.
+  - **Data expanded:** `data_gen_18d.py` default increased from 25k → 50k samples.
+
+### Expected Behavior
+The encoder should now produce a latent space that faithfully represents both chaotic and stable regions of the phase space. JS accuracy provides a single-number quality metric comparable to the v4 GALI surrogate's 96%+ benchmark. The inverse density weighting ensures the encoder doesn't "forget" the stable fibers that the RL agent needs to navigate toward.
+
+---
+
+## [2026-04-29 02:08] Delta 10.1: Two-Phase Tangency Weight Schedule
+**Preceding Issue:** With `tangency_weight=2.0` (fixed), the tangency term dominated 99% of the total loss, starving MSE reconstruction and capping JS accuracy at ~94%. With `tangency_weight=0.5` (fixed), reconstruction was better but tangency alignment plateaued at ~0.6 — too high for manifold surfing (target: <0.30).
+
+### Diagnosis
+The core tension: reconstruction fidelity needs gradient budget early to build a good autoencoder, but directional fidelity (tangent alignment) is what makes the latent space "surfable." A fixed weight cannot serve both phases.
+
+### Code Changes
+- **`train_cassm_encoder.py`**:
+  - **Two-Phase Schedule:** Phase 1 uses `--tangency-weight-init` (default 0.5) while MSE > threshold. Once MSE drops below `--mse-threshold` (default 0.02), Phase 2 activates with `--tangency-weight-final` (default 2.0). Phase transition is logged with `>>> PHASE 2 ACTIVATED`.
+  - **Fixed Mode Override:** `--tangency-weight X` bypasses the schedule entirely (backwards compatible).
+  - **Phase logged in params:** `tangency_schedule: "fixed" | "two-phase"` recorded for reproducibility.
+
+### Expected Behavior
+Phase 1 (~10-20 epochs): MSE drops rapidly to <0.02, JS/HI climb to ~93%+. Phase 2 kicks in and hammers tangency alignment from 0.6 → <0.30 while MSE remains stable. The result is a latent space with both high reconstruction fidelity and precise directional alignment with the attractor's stable/unstable manifolds.
+
+---
+
+## [2026-04-29 02:25] Delta 11: Aggressive Tangency Pursuit & Data Integrity
+**Preceding Issue:** Phase 2 triggered at **Epoch 2** (MSE threshold 0.02 was trivially satisfied). Tangency loss plateaued at 0.53 over 300 epochs — the encoder's latent gradients were only ~47% aligned with the physical deviation vectors, meaning >50% of RL micro-nudges would bleed into unintended physical dimensions. The LR also stagnated, preventing the optimizer from crawling into narrow geometric valleys.
+
+### Root Causes
+1. **MSE threshold too permissive (0.02):** Phase 1 lasted <2 epochs, so the reconstruction foundation was never properly built before tangency pressure was applied.
+2. **Tangency final weight too mild (2.0):** Even at 2.0, reconstruction dominated the gradient; the tangency term had insufficient leverage.
+3. **Fixed LR (3e-4):** Once tangency loss plateaued, the optimizer couldn't escape — needed finer step sizes.
+4. **Tangent vector corruption in data_gen_18d.py:** w₁ and w₂ were only normalized each step, not re-orthogonalized. Over 50 RK45 steps, the vectors drifted toward alignment, producing corrupted tangent targets. The encoder was being asked to align with a near-degenerate basis.
+
+### Code Changes
+- **`train_cassm_encoder.py`**:
+  - **MSE threshold:** 0.02 → **0.008** (force ~10-15 epochs of pure reconstruction before Phase 2)
+  - **Tangency weight final:** 2.0 → **10.0** (aggressive geometric pressure)
+  - **ReduceLROnPlateau:** Added scheduler on `avg_tangency` (factor=0.5, patience=20, min_lr=1e-6). LR transitions logged.
+  - **Best-tangency checkpointing:** New `cassm_encoder_best_tangency.pth` saved whenever tangency loss improves (separate from JS-based checkpoint).
+  - **Metrics logging:** Now includes `lr` and `tangency_weight` per epoch.
+
+- **`data_gen_18d.py`**:
+  - **Gram-Schmidt re-orthogonalization:** Replaced simple normalization with proper GS procedure at each integration step: w₁ is normalized first, then w₂ has its w₁ projection removed before normalization. Prevents tangent collapse into a 1D subspace.
+  - **⚠️ Requires data regeneration** — existing 50k dataset has corrupted tangent vectors.
+
+### Expected Behavior
+With clean orthogonal tangent data + aggressive Phase 2 (weight=10.0) + adaptive LR, the tangency loss should converge below **0.30** within 200-300 epochs. The best-tangency checkpoint is the one to use for RL integration — it prioritizes geometric fidelity over reconstruction accuracy, which is the correct tradeoff for manifold surfing.
+
+---
+
+## [2026-04-29 06:47] Delta 12: Subspace Projection Alignment & SOAP Optimizer
+**Preceding Issue:** Tangency loss plateaued at 0.838 despite Delta 11's aggressive weight schedule. The model hit a "Type II Gradient Conflict" where standard MSE gradients violently opposed point-wise cosine tangency gradients, and Adam was unable to resolve the interference.
+
+### Diagnosis
+1. **Point-wise vs Subspace:** The previous tangency loss forced the encoder's Jacobian to match the *specific directions* of $w_1$ and $w_2$. The RL agent actually only needs the *subspace spanned* by those vectors to overlap with the latent space.
+2. **Orthogonal vs Oblique Projections:** Standard MSE (`x - x_rec`) assumes orthogonal projection onto the manifold. In the highly non-normal coupled Lorenz system, an orthogonal projection maps points to the wrong manifold coordinates. We must use an oblique projection that slides points along the stable fibers.
+3. **First-Order Limitations:** Adam averages competing gradients, leading to zig-zagging in steep geometric valleys.
+
+### Code Changes
+- **`train_cassm_encoder.py`**:
+  - **Oblique Reconstruction Loss:** Replaced standard MSE with $L_{oblique} = \| P_{target} (x - x_{rec}) \|^2$. This strongly penalizes the error component in the unstable subspace, forcing the "bridge" between the raw state and the manifold to be built entirely from stable fibers.
+  - **Subspace Projection Alignment:** Replaced the cosine similarity loop with a robust Frobenius norm of the projection matrices: $L_{tangent} = \frac{1}{B} \sum \| P_{target} - P_{encoder} \|_F^2$.
+    - $P_{target} = W (W^T W)^{-1} W^T$ (computed stably via `W @ pinv(W)`).
+    - $P_{encoder} = V (V^T V)^{-1} V^T$ where $V = J_E^T$.
+  - **Optimizer:** Switched from `optim.Adam` to `SOAP` (Second-Order Adam Preconditioner). SOAP approximates the Hessian preconditioner to "whiten" the gradients and naturally resolve the MSE vs. Tangency conflict.
+
+### Expected Behavior
+The SOAP optimizer should prevent the zigzagging plateau seen previously. The Subspace Projection Loss is much easier to satisfy than point-wise alignment, so the metric should drop significantly. If $L_{tangent}$ still refuses to drop below 0.30 after 100 epochs, we have confirmed "Geometric Frustration" and must increase to `--latent-dim 3`.
+
+---
+
+## [2026-04-29 07:26] Delta 12.1: Geometric Frustration & Trace Overlap Loss
+**Preceding Issue:** Tangency loss plateaued at 0.84 with `latent_dim=2`. Attempting to test `--latent-dim 3` with the Frobenius difference loss $\|P_{target} - P_{encoder}\|_F^2$ would mathematically break the loss metric. Because $P_{encoder}$ would have trace 3 and $P_{target}$ trace 2, the minimum possible Frobenius difference is $1.0$, completely masking any actual alignment improvements.
+
+### Diagnosis
+The 0.84 plateau translates to an overlap of $1.58$ out of $2.0$ (roughly a $27^\circ$ misalignment). To break this plateau, we must allow the encoder to map into a higher-dimensional latent space (e.g., 3D) without the loss function punishing it for the extra dimension. We need an **Asymmetric Containment Loss** rather than a symmetric difference loss.
+
+### Code Changes
+- **`train_cassm_encoder.py`**:
+  - **Trace Overlap Loss:** Replaced Frobenius difference with $L_{tangent} = 2.0 - \text{tr}(P_{target} P_{encoder})$. This elegantly measures how much of the 2D target subspace is *contained* within the encoder's subspace. It perfectly bounds the loss to $[0.0, 2.0]$ regardless of whether `latent_dim` is 2, 3, or 6.
+  - **Ridge-Regularized Inverse:** As `latent_dim` increases, the encoder Jacobian $V$ can temporarily drop rank, causing the pseudo-inverse to explode. Replaced `pinv` with a stable Ridge inverse: $P_{encoder} = V(V^T V + \epsilon I)^{-1} V^T$.
+
+### Expected Behavior
+By running with `--latent-dim 3`, the network will no longer be forced to squash the twisting 3D unstable manifold geometry of the coupled system into a flat 2D plane. The Trace Overlap Loss should now cleanly descend below $0.30$ without hitting an artificial mathematical floor.
+
+---
+
+## [2026-04-29 13:58] Delta 13: Manifold Surfing Reward & Training Domain Fix
+**Preceding Issue:** First SAC integration with caSSM (Delta 12.1 encoder). Results showed the agent learned a generic residual correction, not manifold surfing. IC_28 evidence: 0-1s hybrid effort was +22% higher than PID alone, RL residual was only 1.3% of total control, and the effort reduction after convergence came from PID seeing smaller errors — not from geometric insight. The caSSM coordinates were passive features, not an active surfboard.
+
+### Root Causes
+1. **No directional manifold reward:** The reward only cared about distance, effort, and GALI (a scalar). None gave the agent *directional* information about which way to nudge.
+2. **OOD encoder during transients:** Training `init_bound=40` put ICs 15-20 units outside the attractor basin (~[-20, 20]). The encoder output was noise for the first ~0.5s.
+3. **GALI masking bug:** Variant 6a/6b observation masking hardcoded `obs[6]`, which is wrong for 9D observations (`latent_dim=3`). GALI is always the last element.
+
+### Code Changes
+- **`lorenz_env.py`**:
+  - **Manifold Surfing Reward (7th component):** $r_{surf} = -\omega_{surf} \cdot \|\dot{\xi}\|^2 \cdot g(x)$ where $g(x) = \text{clamp}(1 - \|x\|/R_{attractor}, 0, 1)$. Since the caSSM encoder's image is aligned with the unstable manifold, large $\|\dot{\xi}\|$ means the state is moving rapidly along unstable directions. The attractor-proximity gate $g(x)$ smoothly deactivates the reward outside the basin where the encoder is OOD. $\|\dot{\xi}\|^2$ is capped at 100 to prevent extreme penalties during chaotic spikes.
+  - **New params:** `reward_surf_coeff=2.0`, `attractor_radius=30.0`.
+  - **Stored `current_xi_dot`** in `_build_obs()` for use by the reward function.
+
+- **`train_sac.py`**:
+  - **Training domain:** `init_bound`: 40.0 → **25.0** (keeps ICs within attractor basin where encoder is reliable). Eval/stress tests still use 40.
+  - **New reward params** passed through `create_env()`.
+  - **Observation masking fix:** `obs[6]` → `obs[-1]` (dynamic, works for any `latent_dim`).
+
+### Expected Behavior
+The agent should now actively counteract unstable manifold excitation during the chaotic transient (0-2s), producing RL residual that is *highest* in the early intervals (active surfing) rather than the constant ~8.5/interval passive offset seen in the previous run. Target: >30% total effort reduction and >35% ITWAE improvement.
+
+#### [2026-04-30 04:46] Delta 13.1: Reward Economics Fix
+**Preceding Issue:** Delta 13 with `surf_coeff=0.3` achieved -14.3% effort and -33.7% ITWAE — ITWAE is good but effort reduction was insufficient. Analysis of IC_01 revealed the agent was using only **2.7%** of its available authority (RL_Resid=272 out of max ~10,000 per second). The reward economics were broken: `action_deriv_coeff=1.0` created a **startup barrier** — transitioning from "idle" to "acting" cost -1.0/step in derivative penalty, while opposing the PID was only worth +1.0/step in effort reward. Net profit of acting: **-0.1/step** → unprofitable to start.
+
+**Changes (train_sac.py only):**
+- `rl_lambda`: 25.0 → **50.0** (20% of u_max — doubled authority)
+- `reward_effort_coeff`: 20.0 → **30.0** (each unit of effort reduction now worth +1.5 reward instead of +1.0)
+- `reward_action_deriv_coeff`: 1.0 → **0.1** (removes the startup barrier; acting now nets +1.39/step instead of -0.1)
+
+#### [2026-04-30 05:10] Delta 13.2: Episode Length Reduction
+**Preceding Issue:** Effort reductions in Delta 13.1 were inflated by the 18-second steady-state tail (steps 400-4000) where both PID and RL have near-zero effort. IC_01: 90% of PID effort (23,612 / 26,168) occurs in the first second. The remaining 3,800 steps dilute the metric and let the agent claim effort reduction by simply not adding noise near the origin.
+
+**Changes:**
+- `episode_length`: 4000 → **1000** (20s → 5s at dt=0.005)
+- `warmup_steps`: 10,000 → **5,000** (proportional)
+- `post_run_analysis.py`: episode_length aligned to 1000
+
+**Rationale:** Focuses training entirely on the transient phase (0-5s) where manifold surfing and effort reduction actually matter. Also 4x faster per episode → agent sees 4x more diverse ICs in the same wall time.
+
+#### [2026-04-30 08:14] Delta 13.3: Honest Effort Measurement + Time-Weighted Effort
+**Preceding Issue:** Delta 13.2's -20.5% effort reduction was a measurement artifact. The penultimate run used post_run_analysis with a cached **4000-step PID baseline** (effort accumulated over 20s) against RL trajectories from **1000-step episodes** (5s). When re-evaluated with the honest 1000-step baseline, the agent was actually +4.7% WORSE on effort, with final_error stuck at ~0.19 (degenerate policy). The 5s window was also too aggressive — agents couldn't converge AND reduce effort.
+
+**Root Cause:** With flat effort penalty, the agent treats early transient effort (necessary to bring oscillators down) the same as late steady-state effort (wasteful PID oscillation). Since PID is already near-optimal during the transient, the agent can't beat it on its own turf, and instead learns "do nothing" to avoid the effort penalty.
+
+**Changes:**
+- **`lorenz_env.py` — Time-Weighted Effort Penalty:**
+  - $r_{effort}(t) = -\omega_{effort} \cdot u_{norm} \cdot \sqrt{\frac{t+1}{T_{episode}}}$
+  - Step 0 (0.0s): weight = 0.02 (transient effort nearly free)
+  - Step 200 (1.0s): weight = 0.32
+  - Step 1000 (5.0s): weight = 0.71
+  - Step 2000 (10.0s): weight = 1.0 (full penalty)
+  - This gives the agent freedom to invest effort during the transient and penalises only the wasteful late-phase effort.
+
+- **`train_sac.py`**: `episode_length`: 1000 → **2000** (10s). `warmup_steps`: 5,000 → **8,000**.
+- **`run_baseline_stress_test.py`**: `episode_length`: 1000 → **2000** (must re-run baseline).
+- **`post_run_analysis.py`**: episode_length aligned to 2000.
+
+#### [2026-04-30 11:35] Delta 13.3.1: Reverted Time-Weighted Effort
+**Result:** Time-weighted effort produced +17.9% WORSE effort (honest 2000-step comparison). The sqrt schedule gave the agent a free pass to dump effort during the transient (weight ≈ 0.02-0.3 in the first second). Net effect: agent invested MORE total effort, not less.
+**Fix:** Reverted to flat effort penalty. Kept episode_length=2000 and the forced-fresh PID simulation in post_run_analysis.
+
+---
+
+### [2026-04-30 15:54] Delta 14: Marginal Effort Reward
+**Preceding Issue:** All prior "good" effort deltas (-21.1%, -20.5%) were measurement artifacts caused by comparing PID metrics from 4000-step cached baselines against RL metrics from shorter episodes. Once honestly measured (matched episode lengths), the agent was consistently +4% to +18% WORSE than PID. The root cause: the absolute effort penalty `r = -ω · |u_total|` penalises ALL effort equally, including PID effort the agent can't control. The agent learns "do nothing" is safest because any action risks increasing the penalty.
+
+**Change (`lorenz_env.py` — `_compute_reward`):**
+- **Before:** `r_effort = -ω · |u_total| / (n · u_max)`
+- **After:** `r_effort = -ω · (|u_total| - |u_pid|) / (n · u_max)`
+- Added `u_pid` parameter to `_compute_reward()` and updated the call site in `step()`.
+
+**Reward semantics:**
+- Agent does nothing → `|u_total| = |u_pid|` → delta=0 → reward=0
+- Agent opposes PID (reduces total effort) → delta<0 → **positive reward**
+- Agent adds to PID (increases total effort) → delta>0 → **negative penalty**
+
+**Rationale:** This directly aligns the per-step reward with the evaluation metric (effort delta). The agent is no longer punished for PID's inherent effort; it is only rewarded/penalised for the effort it saves or adds.
+
+#### [2026-04-30 17:13] Delta 14.1: Effort Coefficient Rebalance
+**Preceding Issue:** Delta 14's marginal effort with `effort_coeff=30` produced a reward that dominated distance: max `r_effort = +6.0/step` vs `r_dist ≈ -2.0/step` during the transient. Agent learned to maximally oppose PID (reward ~5000, error=12, effort=340k, ConvStep=2000 i.e. never converges).
+
+**Change:** `reward_effort_coeff`: 30 → **5.0**. Max `r_effort` now ±1.0/step, always subordinate to `r_dist` (-2.0/step during transient). Agent must converge first; effort reduction is a mild secondary bonus.
+
+#### [2026-05-01 00:07] Delta 14.2: Revert to Absolute Effort + Extended Training
+**Preceding Issue:** Marginal effort (Deltas 14/14.1) is fundamentally broken. It creates a stable equilibrium at intermediate distance (dist≈10-12): at dist=10, `r_dist=-0.51/step` but `r_effort=+1.0/step` from opposing PID. The agent profits from non-convergence. Even `effort_coeff=5` produced error=10-12, effort=330k, ConvStep=2000 (never converges). **Marginal effort reward is incompatible with convergence.**
+
+**Changes:**
+- **Reverted `lorenz_env.py`** to absolute effort: `r_effort = -ω · |u_total| / (n · u_max)`. Removed `u_pid` from `_compute_reward` signature.
+- **`reward_effort_coeff`**: kept at **5.0** (mild effort nudge, subordinate to distance)
+- **`total_episodes`**: 500 → **1000** (2M transitions). Previous 500-ep runs may not have had enough data to discover the subtle post-convergence savings.
+
+**Rationale:** Absolute effort is the only formulation where convergence and effort reduction are naturally aligned: the system must converge (reducing PID output) before |u_total| can drop. Post-convergence, the agent can reduce effort by opposing PID's residual chatter. More training episodes give the agent time to discover this.
+
+---
+
+### [2026-05-01 10:24] Delta 15: Simplified Reward Function
+**Preceding Issue:** The Delta 14.2 run resulted in a catastrophic failure (`+527%` effort, `+9203%` error, `+1729%` ITWAE). Investigating the reward components revealed that the Manifold Surfing penalty (`r_surf`) was completely dominating the reward signal. `r_surf` could hit `-30/step`, while all other components combined (distance, effort, etc.) maxed out around `-5/step`. The agent learned to solely minimize latent velocity (movement along the unstable manifold), ignoring convergence and effort entirely.
+
+**Changes:**
+- **`lorenz_env.py` (`_compute_reward`)**: Stripped the 7-component reward down to **3 core components**:
+  1. Distance to target (`r_dist = -coeff * (dist / max_dist)`)
+  2. Absolute effort penalty (`r_effort = -coeff * u_norm`)
+  3. Convergence bonus (`r_conv = bonus if dist < threshold else 0`)
+- Removed GALI stability (`r_stability`), sparsity (`r_sparsity`), action derivative (`r_deriv`), and manifold surfing (`r_surf`) penalties.
+- **`train_sac.py`**: Increased `reward_effort_coeff` back to **10.0** (from 5.0) to balance against `reward_distance_coeff = 5.0` without the competing reward terms.
+
+**Rationale:** The reward signal had become too complex, with competing penalties that misdirected the agent. By isolating the two core objectives—converge (minimize distance) and do it efficiently (minimize effort)—we provide a clean, unambiguous gradient for the SAC agent to optimize.
