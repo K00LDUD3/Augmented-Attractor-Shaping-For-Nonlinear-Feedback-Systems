@@ -174,8 +174,11 @@ class CoupledLorenzHybridEnv(gym.Env):
         # State bounds
         state_bound: float = 40.0,
         init_bound: float = 40.0,
+        use_cassm: bool = True,
     ):
         super().__init__()
+
+        self.use_cassm = use_cassm
 
         # --- Store all parameters for logging ---
         self.dt = dt
@@ -222,11 +225,18 @@ class CoupledLorenzHybridEnv(gym.Env):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self._load_surrogate(surrogate_path)
-        self._load_cassm()
+        if self.use_cassm:
+            self._load_cassm()
+        else:
+            # 6c-compatible: no caSSM encoder, obs = [state(6), u_pid(2)/u_max, log_gali_norm(1)]
+            self.latent_dim = 0
+            self.encoder = None
 
         # --- Gymnasium spaces ---
-        # Observation: [xi, xi_dot, u_pid/u_max, log_gali_norm]
-        obs_dim = 2 * self.latent_dim + 2 + 1
+        if self.use_cassm:
+            obs_dim = 2 * self.latent_dim + 2 + 1
+        else:
+            obs_dim = 6 + 2 + 1  # state + u_pid + gali
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
         )
@@ -307,22 +317,27 @@ class CoupledLorenzHybridEnv(gym.Env):
 
     def _build_obs(self, state, u_pid, log_gali_norm):
         """Construct the dynamic observation vector."""
-        # Project state to latent manifold
-        with torch.no_grad():
-            x = torch.tensor(state / self.state_bound, dtype=torch.float32).unsqueeze(0).to(self.device)
-            xi = self.encoder(x).cpu().numpy().flatten()
-            
-        # Finite difference for velocity
-        xi_dot = (xi - self.last_xi) / self.dt
-        self.last_xi = xi.copy()
-        self.current_xi_dot = xi_dot.copy()  # Store for surfing reward
-
-        return np.concatenate([
-            xi,
-            xi_dot,
-            u_pid / self.u_max,
-            np.array([log_gali_norm])
-        ]).astype(np.float32)
+        if self.use_cassm:
+            # caSSM latent-space observation (6d variant)
+            with torch.no_grad():
+                x = torch.tensor(state / self.state_bound, dtype=torch.float32).unsqueeze(0).to(self.device)
+                xi = self.encoder(x).cpu().numpy().flatten()
+            xi_dot = (xi - self.last_xi) / self.dt
+            self.last_xi = xi.copy()
+            self.current_xi_dot = xi_dot.copy()
+            return np.concatenate([
+                xi,
+                xi_dot,
+                u_pid / self.u_max,
+                np.array([log_gali_norm])
+            ]).astype(np.float32)
+        else:
+            # 6c-compatible: raw state + pid + gali
+            return np.concatenate([
+                state / self.state_bound,
+                u_pid / self.u_max,
+                np.array([log_gali_norm])
+            ]).astype(np.float32)
 
     def _compute_reward(self, state, next_state, u_total, log_gali_next):
         """
@@ -382,9 +397,12 @@ class CoupledLorenzHybridEnv(gym.Env):
         self.pid2.reset()
 
         # Initialize last_xi so initial xi_dot is 0
-        with torch.no_grad():
-            x0 = torch.tensor(self.state / self.state_bound, dtype=torch.float32).unsqueeze(0).to(self.device)
-            self.last_xi = self.encoder(x0).cpu().numpy().flatten()
+        if self.use_cassm:
+            with torch.no_grad():
+                x0 = torch.tensor(self.state / self.state_bound, dtype=torch.float32).unsqueeze(0).to(self.device)
+                self.last_xi = self.encoder(x0).cpu().numpy().flatten()
+        else:
+            self.last_xi = np.zeros(0)
 
         _, log_gali_norm = self._query_gali(self.state)
         obs = self._build_obs(self.state, np.zeros(2), log_gali_norm)

@@ -97,8 +97,8 @@ def evaluate_run(run_dir, n_eval=50):
 
     # Create dummy environment to initialize configs
     print("Loading Environment and SAC Agent...")
-    env = create_env(params, variant_config)
-    env.episode_length = 2000  # Match training episode length (10s at dt=0.005)
+    env = create_env(params, variant_config, use_cassm=False)
+    env.episode_length = params.get("episode_length", 4000)
     
     obs_dim = env.observation_space.shape[0]
     act_dim = env.action_space.shape[0]
@@ -379,7 +379,7 @@ def generate_3d_flight_paths(ics, rl_paths, pid_paths, rl_actions, rl_pids, rl_t
         time_text = fig.text(0.02, 0.95, "Time: 0.00s", fontsize=20, color='darkred', weight='bold')
 
         plt.suptitle(f"Trajectory Comparison - Evaluation IC {i+1}", fontsize=20)
-        plt.tight_layout()
+        plt.tight_layout(rect=[0, 0, 1, 0.93])
         
         # Static save first
         line1_o1.set_data_3d(pid_trj[:, 0], pid_trj[:, 1], pid_trj[:, 2])
@@ -392,50 +392,9 @@ def generate_3d_flight_paths(ics, rl_paths, pid_paths, rl_actions, rl_pids, rl_t
         pid_point.set_data([len(pid_mags)-1], [pid_mags[-1]])
         tot_point.set_data([len(tot_mags)-1], [tot_mags[-1]])
         
-        plt.savefig(os.path.join(path_dir, f"path_comparison_ic_{i+1}.png"), dpi=500)
-
-        # Animation (downsampled for speed: 100 moving frames, plus 40 hold frames at the start)
-        total_steps = len(rl_trj)
-        stride = max(1, total_steps // 100)
-        hold_frames = 40  # 2 seconds at 20fps
-        
-        def update(frame):
-            if frame < hold_frames:
-                idx = 1
-                act_idx = 0
-                sig_idx = 0
-                time_text.set_text("Time: 0.00s [HOLD]")
-            else:
-                active_frame = frame - hold_frames
-                idx = min((active_frame + 1) * stride, total_steps)
-                act_idx = min(idx, len(act_mags)-1)
-                sig_idx = min(idx, len(pid_mags)-1)
-                time_text.set_text(f"Time: {(idx * 0.005):.2f}s")
-            
-            line1_o1.set_data_3d(pid_trj[:idx, 0], pid_trj[:idx, 1], pid_trj[:idx, 2])
-            line1_o2.set_data_3d(pid_trj[:idx, 3], pid_trj[:idx, 4], pid_trj[:idx, 5])
-            
-            line2_o1.set_data_3d(rl_trj[:idx, 0], rl_trj[:idx, 1], rl_trj[:idx, 2])
-            line2_o2.set_data_3d(rl_trj[:idx, 3], rl_trj[:idx, 4], rl_trj[:idx, 5])
-            
-            act_point.set_data([act_idx], [act_mags[act_idx]])
-            pid_point.set_data([sig_idx], [pid_mags[sig_idx]])
-            tot_point.set_data([sig_idx], [tot_mags[sig_idx]])
-            
-            return line1_o1, line1_o2, line2_o1, line2_o2, act_point, pid_point, tot_point, time_text
-        
-        anim = FuncAnimation(fig, update, frames=100 + hold_frames, interval=50, blit=False)
-        vid_path = os.path.join(path_dir, f"path_comparison_ic_{i+1}.mp4")
-        try:
-            anim.save(vid_path, fps=20, extra_args=['-vcodec', 'libx264'])
-            print(f"  -> Saved MP4 animation for IC {i+1}")
-        except Exception:
-            # Fallback to GIF if FFMpeg is missing
-            gif_path = os.path.join(path_dir, f"path_comparison_ic_{i+1}.gif")
-            anim.save(gif_path, writer=PillowWriter(fps=20))
-            print(f"  -> Saved GIF animation for IC {i+1} (FFMpeg missing)")
-            
+        plt.savefig(os.path.join(path_dir, f"path_comparison_ic_{i+1}.png"), dpi=300)
         plt.close(fig)
+        print(f"  -> Saved PNG for IC {i+1}")
 
 def generate_kinematic_flight_paths(ics, rl_paths, pid_paths, out_dir):
     from matplotlib.animation import FuncAnimation, PillowWriter
@@ -467,8 +426,8 @@ def generate_kinematic_flight_paths(ics, rl_paths, pid_paths, out_dir):
 
         line1_o1, = ax1.plot([], [], [], color='black', alpha=0.7, linewidth=1.5, label='O1 (PID)')
         line1_o2, = ax1.plot([], [], [], color='gray', alpha=0.5, linewidth=1.0, linestyle='--', label='O2 (PID)')
-        line2_o1, = ax2.plot([], [], [], color='blue', alpha=0.7, linewidth=1.5, label='O1 (RL)')
-        line2_o2, = ax2.plot([], [], [], color='cyan', alpha=0.5, linewidth=1.0, linestyle='--', label='O2 (RL)')
+        line2_o1, = ax2.plot([], [], [], color='black', alpha=0.7, linewidth=1.5, label='O1 (RL)')
+        line2_o2, = ax2.plot([], [], [], color='gray', alpha=0.5, linewidth=1.0, linestyle='--', label='O2 (RL)')
         
         ax1.legend()
         ax2.legend()
@@ -481,33 +440,8 @@ def generate_kinematic_flight_paths(ics, rl_paths, pid_paths, out_dir):
         line2_o1.set_data_3d(rl_trj[:, 0], rl_trj[:, 1], rl_trj[:, 2])
         line2_o2.set_data_3d(rl_trj[:, 3], rl_trj[:, 4], rl_trj[:, 5])
         plt.savefig(os.path.join(path_dir, f"kinematic_ic_{i+1}.png"), dpi=300)
-
-        total_steps = len(rl_trj)
-        stride = max(1, total_steps // 100)
-        hold_frames = 40
-        
-        def update(frame):
-            if frame < hold_frames:
-                idx = 1
-                time_text.set_text("Time: 0.00s [HOLD]")
-            else:
-                active_frame = frame - hold_frames
-                idx = min((active_frame + 1) * stride, total_steps)
-                time_text.set_text(f"Time: {(idx * 0.005):.2f}s")
-            
-            line1_o1.set_data_3d(pid_trj[:idx, 0], pid_trj[:idx, 1], pid_trj[:idx, 2])
-            line1_o2.set_data_3d(pid_trj[:idx, 3], pid_trj[:idx, 4], pid_trj[:idx, 5])
-            line2_o1.set_data_3d(rl_trj[:idx, 0], rl_trj[:idx, 1], rl_trj[:idx, 2])
-            line2_o2.set_data_3d(rl_trj[:idx, 3], rl_trj[:idx, 4], rl_trj[:idx, 5])
-            return line1_o1, line1_o2, line2_o1, line2_o2, time_text
-
-        anim = FuncAnimation(fig, update, frames=100 + hold_frames, interval=50, blit=False)
-        vid_path = os.path.join(path_dir, f"kinematic_ic_{i+1}.mp4")
-        try:
-            anim.save(vid_path, fps=20, extra_args=['-vcodec', 'libx264', '-pix_fmt', 'yuv420p'])
-        except Exception as e:
-            print(f"FAILED FFmpeg (Kinematic {i+1}): {e}")
         plt.close(fig)
+        print(f"  -> Saved kinematic PNG for IC {i+1}")
 
 def generate_diagnostic_timelines(ics, rl_paths, pid_paths, rl_actions, rl_pids, rl_totals, out_dir):
     from matplotlib.animation import FuncAnimation, PillowWriter
@@ -547,13 +481,13 @@ def generate_diagnostic_timelines(ics, rl_paths, pid_paths, rl_actions, rl_pids,
 
         ax_e2.set_title("Oscillator 2 Absolute Error")
         ax_e2.plot(pid_e2, 'k', alpha=0.5, label='PID Baseline')
-        ax_e2.plot(rl_e2, 'c', alpha=0.8, label='Hybrid RL')
+        ax_e2.plot(rl_e2, color='#c00000', alpha=0.8, label='Hybrid RL')
         ax_e2.legend()
         ax_e2.grid(True)
         ax_e2.set_xlim([0, len(pid_e2)])
         ax_e2.set_ylim([0, max(1.0, np.max(pid_e2), np.max(rl_e2)) * 1.1])
         dot_pid_e2, = ax_e2.plot([], [], 'ko', markersize=6)
-        dot_rl_e2, = ax_e2.plot([], [], 'co', markersize=8)
+        dot_rl_e2, = ax_e2.plot([], [], color='#c00000', marker='o', markersize=8, linestyle='none')
 
         ax_act.set_title("RL Residual Thrust")
         ax_act.plot(act_mags, color='orange', alpha=0.8)
@@ -573,7 +507,7 @@ def generate_diagnostic_timelines(ics, rl_paths, pid_paths, rl_actions, rl_pids,
         dot_tot_sig, = ax_sig.plot([], [], 'mo', markersize=8)
 
         time_text = fig.text(0.02, 0.95, "Time: 0.00s", fontsize=16, color='darkred', weight='bold')
-        plt.tight_layout()
+        plt.tight_layout(rect=[0, 0, 1, 0.93])
 
         dot_pid_e1.set_data([len(pid_e1)-1], [pid_e1[-1]])
         dot_rl_e1.set_data([len(rl_e1)-1], [rl_e1[-1]])
@@ -583,41 +517,8 @@ def generate_diagnostic_timelines(ics, rl_paths, pid_paths, rl_actions, rl_pids,
         dot_pid_sig.set_data([len(pid_mags)-1], [pid_mags[-1]])
         dot_tot_sig.set_data([len(tot_mags)-1], [tot_mags[-1]])
         plt.savefig(os.path.join(path_dir, f"diagnostic_ic_{i+1}.png"), dpi=300)
-
-        total_steps = len(rl_trj)
-        stride = max(1, total_steps // 100)
-        hold_frames = 40
-
-        def update(frame):
-            if frame < hold_frames:
-                idx = 1
-                time_text.set_text("Time: 0.00s [HOLD]")
-            else:
-                active_frame = frame - hold_frames
-                idx = min((active_frame + 1) * stride, total_steps)
-                time_text.set_text(f"Time: {(idx * 0.005):.2f}s")
-                
-            act_idx = min(idx, len(act_mags)-1)
-            sig_idx = min(idx, len(pid_mags)-1)
-            idx_e = min(idx, len(pid_e1)-1)
-            
-            dot_pid_e1.set_data([idx_e], [pid_e1[idx_e]])
-            dot_rl_e1.set_data([idx_e], [rl_e1[idx_e]])
-            dot_pid_e2.set_data([idx_e], [pid_e2[idx_e]])
-            dot_rl_e2.set_data([idx_e], [rl_e2[idx_e]])
-            dot_act.set_data([act_idx], [act_mags[act_idx]])
-            dot_pid_sig.set_data([sig_idx], [pid_mags[sig_idx]])
-            dot_tot_sig.set_data([sig_idx], [tot_mags[sig_idx]])
-
-            return dot_pid_e1, dot_rl_e1, dot_pid_e2, dot_rl_e2, dot_act, dot_pid_sig, dot_tot_sig, time_text
-        
-        anim = FuncAnimation(fig, update, frames=100 + hold_frames, interval=50, blit=False)
-        vid_path = os.path.join(path_dir, f"diagnostic_ic_{i+1}.mp4")
-        try:
-            anim.save(vid_path, fps=20, extra_args=['-vcodec', 'libx264', '-pix_fmt', 'yuv420p'])
-        except Exception as e:
-            print(f"FAILED FFmpeg (Diagnostics {i+1}): {e}")
         plt.close(fig)
+        print(f"  -> Saved diagnostic PNG for IC {i+1}")
 
 def export_numerical_diagnostics(ics, rl_paths, pid_paths, rl_actions, rl_pids, rl_totals, pid_metrics_list, rl_metrics_list, out_dir):
     """

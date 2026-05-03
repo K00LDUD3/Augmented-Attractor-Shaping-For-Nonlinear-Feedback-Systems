@@ -142,7 +142,7 @@ def generate_lhs_ics(n_samples, dim=6, bounds=(-40.0, 40.0), seed=42):
     return ics
 
 
-def create_env(params, variant_config):
+def create_env(params, variant_config, use_cassm=True):
     """Instantiate the hybrid environment with variant-specific config."""
     gali_coeff = variant_config["reward_gali_coeff"]
 
@@ -163,6 +163,7 @@ def create_env(params, variant_config):
         attractor_radius=params["attractor_radius"],
         state_bound=params["state_bound"],
         init_bound=params["init_bound"],
+        use_cassm=use_cassm,
     )
 
     # For variant 6b: mask GALI out of the observation
