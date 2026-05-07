@@ -508,7 +508,6 @@ def generate_diagnostic_timelines(ics, rl_paths, pid_paths, rl_actions, rl_pids,
 
         time_text = fig.text(0.02, 0.95, "Time: 0.00s", fontsize=16, color='darkred', weight='bold')
         plt.tight_layout(rect=[0, 0, 1, 0.93])
-
         dot_pid_e1.set_data([len(pid_e1)-1], [pid_e1[-1]])
         dot_rl_e1.set_data([len(rl_e1)-1], [rl_e1[-1]])
         dot_pid_e2.set_data([len(pid_e2)-1], [pid_e2[-1]])
