@@ -1,0 +1,11 @@
+{
+    "variant": "6c",
+    "variant_label": "GALI Both (Obs+Reward)",
+    "total_episodes": 500,
+    "total_steps": 2000000,
+    "training_time_sec": 36070.10025691986,
+    "best_eval_reward": 3131.6438773063505,
+    "best_eval_error": 0.005372164371030382,
+    "final_buffer_size": 1000000,
+    "device": "cuda"
+}

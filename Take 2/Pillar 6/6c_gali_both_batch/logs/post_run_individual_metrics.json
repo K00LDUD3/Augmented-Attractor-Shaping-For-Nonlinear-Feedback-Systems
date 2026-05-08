@@ -1,0 +1,1052 @@
+[
+    {
+        "IC_index": 1,
+        "Metrics_PID": {
+            "total_effort": 21210.85581226313,
+            "final_error": 0.04648044987974943,
+            "itwae": 10.085817710866221,
+            "max_overshoot": 59.91928673497216
+        },
+        "Metrics_RL": {
+            "total_effort": 16249.342967953926,
+            "final_error": 0.023131908546035963,
+            "itwae": 9.40173779835169,
+            "max_overshoot": 60.02345678296982
+        },
+        "Deltas_pct": {
+            "total_effort": -23.391384526034482,
+            "final_error": -50.2330364575192,
+            "itwae": -6.782592469200792,
+            "max_overshoot": 0.17385061417437767
+        }
+    },
+    {
+        "IC_index": 2,
+        "Metrics_PID": {
+            "total_effort": 9720.89165801453,
+            "final_error": 0.022001804916903515,
+            "itwae": 9.470084800277585,
+            "max_overshoot": 59.08312282490086
+        },
+        "Metrics_RL": {
+            "total_effort": 7670.820928932,
+            "final_error": 0.02153546486265873,
+            "itwae": 9.518832491068508,
+            "max_overshoot": 59.10652521115545
+        },
+        "Deltas_pct": {
+            "total_effort": -21.08932802879579,
+            "final_error": -2.1195536275594633,
+            "itwae": 0.5147545330269354,
+            "max_overshoot": 0.0396092574929455
+        }
+    },
+    {
+        "IC_index": 3,
+        "Metrics_PID": {
+            "total_effort": 16820.08906719033,
+            "final_error": 0.03700732605515958,
+            "itwae": 8.122928922390447,
+            "max_overshoot": 49.801546055341184
+        },
+        "Metrics_RL": {
+            "total_effort": 13717.588305751175,
+            "final_error": 0.01489389718691073,
+            "itwae": 7.230555099322261,
+            "max_overshoot": 49.801546055341184
+        },
+        "Deltas_pct": {
+            "total_effort": -18.44521006426159,
+            "final_error": -59.75419254903392,
+            "itwae": -10.98586275460815,
+            "max_overshoot": 0.0
+        }
+    },
+    {
+        "IC_index": 4,
+        "Metrics_PID": {
+            "total_effort": 12987.845221947113,
+            "final_error": 0.014443229815331388,
+            "itwae": 4.578522464273597,
+            "max_overshoot": 49.0649745024117
+        },
+        "Metrics_RL": {
+            "total_effort": 9206.776475082952,
+            "final_error": 0.017816402962995605,
+            "itwae": 4.3354618777687985,
+            "max_overshoot": 49.09959427867936
+        },
+        "Deltas_pct": {
+            "total_effort": -29.11236376974094,
+            "final_error": 23.35470106612593,
+            "itwae": -5.308712328079862,
+            "max_overshoot": 0.07055904261391051
+        }
+    },
+    {
+        "IC_index": 5,
+        "Metrics_PID": {
+            "total_effort": 12864.508418140145,
+            "final_error": 0.012356160924213449,
+            "itwae": 6.127624142470397,
+            "max_overshoot": 56.92603784221046
+        },
+        "Metrics_RL": {
+            "total_effort": 13711.698622856538,
+            "final_error": 0.014091894660820127,
+            "itwae": 6.447632992487421,
+            "max_overshoot": 56.978068075512034
+        },
+        "Deltas_pct": {
+            "total_effort": 6.585484475425245,
+            "final_error": 14.04751643534595,
+            "itwae": 5.222396847075701,
+            "max_overshoot": 0.09139970964743983
+        }
+    },
+    {
+        "IC_index": 6,
+        "Metrics_PID": {
+            "total_effort": 21226.35604748708,
+            "final_error": 0.032229262728066005,
+            "itwae": 5.985609602156209,
+            "max_overshoot": 46.7430184276626
+        },
+        "Metrics_RL": {
+            "total_effort": 16208.97453446732,
+            "final_error": 0.01322316715154304,
+            "itwae": 4.7243922144292805,
+            "max_overshoot": 46.77455023546882
+        },
+        "Deltas_pct": {
+            "total_effort": -23.637507548610785,
+            "final_error": -58.97154935527584,
+            "itwae": -21.07082605709195,
+            "max_overshoot": 0.06745779127426696
+        }
+    },
+    {
+        "IC_index": 7,
+        "Metrics_PID": {
+            "total_effort": 18845.836086761818,
+            "final_error": 0.0402106298307977,
+            "itwae": 12.504412383242986,
+            "max_overshoot": 76.91247266625979
+        },
+        "Metrics_RL": {
+            "total_effort": 17586.55645644248,
+            "final_error": 0.020393510091947092,
+            "itwae": 11.843637415167203,
+            "max_overshoot": 77.13173079832181
+        },
+        "Deltas_pct": {
+            "total_effort": -6.682004579271041,
+            "final_error": -49.28328609185944,
+            "itwae": -5.284334423913272,
+            "max_overshoot": 0.2850748707734739
+        }
+    },
+    {
+        "IC_index": 8,
+        "Metrics_PID": {
+            "total_effort": 40660.73777385553,
+            "final_error": 0.06670783163396841,
+            "itwae": 11.204314581542135,
+            "max_overshoot": 29.990840548075333
+        },
+        "Metrics_RL": {
+            "total_effort": 30394.24135463093,
+            "final_error": 0.017403370318750874,
+            "itwae": 7.793450046844305,
+            "max_overshoot": 30.15380747967568
+        },
+        "Deltas_pct": {
+            "total_effort": -25.249164135496482,
+            "final_error": -73.91105378114423,
+            "itwae": -30.44242028260123,
+            "max_overshoot": 0.5433890101849992
+        }
+    },
+    {
+        "IC_index": 9,
+        "Metrics_PID": {
+            "total_effort": 30009.874579237767,
+            "final_error": 0.05665152407705329,
+            "itwae": 10.645412004942814,
+            "max_overshoot": 42.09066110267692
+        },
+        "Metrics_RL": {
+            "total_effort": 20347.05765231137,
+            "final_error": 0.020789371437941396,
+            "itwae": 8.527966236143772,
+            "max_overshoot": 43.27642429724922
+        },
+        "Deltas_pct": {
+            "total_effort": -32.198791439173775,
+            "final_error": -63.303067699175756,
+            "itwae": -19.89068875695823,
+            "max_overshoot": 2.8171645764359106
+        }
+    },
+    {
+        "IC_index": 10,
+        "Metrics_PID": {
+            "total_effort": 22144.911664037456,
+            "final_error": 0.06065424996112539,
+            "itwae": 13.735061953003823,
+            "max_overshoot": 64.36581006512482
+        },
+        "Metrics_RL": {
+            "total_effort": 18966.972174255916,
+            "final_error": 0.024162846895606434,
+            "itwae": 12.377772397487707,
+            "max_overshoot": 64.35693315213845
+        },
+        "Deltas_pct": {
+            "total_effort": -14.350653269673682,
+            "final_error": -60.162978008807436,
+            "itwae": -9.881932532668923,
+            "max_overshoot": -0.013791348197722986
+        }
+    },
+    {
+        "IC_index": 11,
+        "Metrics_PID": {
+            "total_effort": 29651.63481481436,
+            "final_error": 0.014545587735280625,
+            "itwae": 9.74261457448859,
+            "max_overshoot": 76.56849725155301
+        },
+        "Metrics_RL": {
+            "total_effort": 25193.108461027034,
+            "final_error": 0.012085292740462645,
+            "itwae": 9.80329198562002,
+            "max_overshoot": 76.61869395914313
+        },
+        "Deltas_pct": {
+            "total_effort": -15.036359315877535,
+            "final_error": -16.914373207831837,
+            "itwae": 0.6228041832868516,
+            "max_overshoot": 0.06555791140213298
+        }
+    },
+    {
+        "IC_index": 12,
+        "Metrics_PID": {
+            "total_effort": 17845.96644635289,
+            "final_error": 0.016685004343509814,
+            "itwae": 6.106265925825402,
+            "max_overshoot": 39.05560482583608
+        },
+        "Metrics_RL": {
+            "total_effort": 14119.78076692528,
+            "final_error": 0.01638192335228073,
+            "itwae": 5.513423514943122,
+            "max_overshoot": 39.10770667769214
+        },
+        "Deltas_pct": {
+            "total_effort": -20.879707975631188,
+            "final_error": -1.8164873379069815,
+            "itwae": -9.708755204632578,
+            "max_overshoot": 0.13340428880414817
+        }
+    },
+    {
+        "IC_index": 13,
+        "Metrics_PID": {
+            "total_effort": 35984.18188405924,
+            "final_error": 0.027222613233610703,
+            "itwae": 7.1216054521861345,
+            "max_overshoot": 44.68202412143422
+        },
+        "Metrics_RL": {
+            "total_effort": 27507.1850669072,
+            "final_error": 0.011981492132032576,
+            "itwae": 5.734148774442711,
+            "max_overshoot": 44.68202412143422
+        },
+        "Deltas_pct": {
+            "total_effort": -23.55756438888859,
+            "final_error": -55.98698762233637,
+            "itwae": -19.482358115156647,
+            "max_overshoot": 0.0
+        }
+    },
+    {
+        "IC_index": 14,
+        "Metrics_PID": {
+            "total_effort": 15063.725594410296,
+            "final_error": 0.021065899776607368,
+            "itwae": 9.256228047772844,
+            "max_overshoot": 66.45195428263631
+        },
+        "Metrics_RL": {
+            "total_effort": 11781.62578390085,
+            "final_error": 0.019251024681369616,
+            "itwae": 9.34553737962001,
+            "max_overshoot": 66.51631747035461
+        },
+        "Deltas_pct": {
+            "total_effort": -21.788101422448484,
+            "final_error": -8.61522704695045,
+            "itwae": 0.964856649881866,
+            "max_overshoot": 0.0968567266578007
+        }
+    },
+    {
+        "IC_index": 15,
+        "Metrics_PID": {
+            "total_effort": 22419.070403895537,
+            "final_error": 0.052666619783688064,
+            "itwae": 13.391583867322142,
+            "max_overshoot": 68.43795305353169
+        },
+        "Metrics_RL": {
+            "total_effort": 19564.630070767693,
+            "final_error": 0.020062290469467798,
+            "itwae": 12.272415919895247,
+            "max_overshoot": 69.3570806426096
+        },
+        "Deltas_pct": {
+            "total_effort": -12.732197551919267,
+            "final_error": -61.90700950266509,
+            "itwae": -8.357248541435528,
+            "max_overshoot": 1.3430085910941574
+        }
+    },
+    {
+        "IC_index": 16,
+        "Metrics_PID": {
+            "total_effort": 26987.051425319558,
+            "final_error": 0.05584992226312487,
+            "itwae": 10.278062837690829,
+            "max_overshoot": 45.75703966088454
+        },
+        "Metrics_RL": {
+            "total_effort": 19166.547175545373,
+            "final_error": 0.01880842243936889,
+            "itwae": 8.366314328149056,
+            "max_overshoot": 46.52172226783797
+        },
+        "Deltas_pct": {
+            "total_effort": -28.978728081560252,
+            "final_error": -66.32327910725272,
+            "itwae": -18.600280419878086,
+            "max_overshoot": 1.6711802437847076
+        }
+    },
+    {
+        "IC_index": 17,
+        "Metrics_PID": {
+            "total_effort": 19299.975192339924,
+            "final_error": 0.01882631853604695,
+            "itwae": 9.00363159960459,
+            "max_overshoot": 65.16044124468203
+        },
+        "Metrics_RL": {
+            "total_effort": 16428.908143312776,
+            "final_error": 0.014977002727012231,
+            "itwae": 8.742182354701733,
+            "max_overshoot": 65.24767915568822
+        },
+        "Deltas_pct": {
+            "total_effort": -14.87601419387659,
+            "final_error": -20.446460637879863,
+            "itwae": -2.9038198865704348,
+            "max_overshoot": 0.13388170696788224
+        }
+    },
+    {
+        "IC_index": 18,
+        "Metrics_PID": {
+            "total_effort": 11674.031631444883,
+            "final_error": 0.022784076965418433,
+            "itwae": 10.265839539402096,
+            "max_overshoot": 70.82822581045231
+        },
+        "Metrics_RL": {
+            "total_effort": 11747.234496893,
+            "final_error": 0.021620736423256594,
+            "itwae": 10.461977214861873,
+            "max_overshoot": 71.53187324169726
+        },
+        "Deltas_pct": {
+            "total_effort": 0.6270572820013525,
+            "final_error": -5.105936676423414,
+            "itwae": 1.9105858289228697,
+            "max_overshoot": 0.9934562431762997
+        }
+    },
+    {
+        "IC_index": 19,
+        "Metrics_PID": {
+            "total_effort": 26161.03482035318,
+            "final_error": 0.03815666331762381,
+            "itwae": 11.330637406994027,
+            "max_overshoot": 63.193204919617344
+        },
+        "Metrics_RL": {
+            "total_effort": 20032.333609961646,
+            "final_error": 0.017538411861971814,
+            "itwae": 10.452246784466604,
+            "max_overshoot": 63.23693678608181
+        },
+        "Deltas_pct": {
+            "total_effort": -23.42683021706553,
+            "final_error": -54.03578212282737,
+            "itwae": -7.752349589664051,
+            "max_overshoot": 0.06920343179317587
+        }
+    },
+    {
+        "IC_index": 20,
+        "Metrics_PID": {
+            "total_effort": 26770.652190659468,
+            "final_error": 0.07349101064048513,
+            "itwae": 16.563796182268746,
+            "max_overshoot": 71.5037305146071
+        },
+        "Metrics_RL": {
+            "total_effort": 23878.409841664747,
+            "final_error": 0.026449826772295924,
+            "itwae": 14.753618984237491,
+            "max_overshoot": 71.49681367045255
+        },
+        "Deltas_pct": {
+            "total_effort": -10.803779931830917,
+            "final_error": -64.00943932899857,
+            "itwae": -10.928516495325015,
+            "max_overshoot": -0.009673403198358636
+        }
+    },
+    {
+        "IC_index": 21,
+        "Metrics_PID": {
+            "total_effort": 27262.115464131097,
+            "final_error": 0.045394008050230146,
+            "itwae": 11.726088957515287,
+            "max_overshoot": 61.49065036450501
+        },
+        "Metrics_RL": {
+            "total_effort": 22476.014081654546,
+            "final_error": 0.016877869092471475,
+            "itwae": 10.582251290298279,
+            "max_overshoot": 61.53387370288927
+        },
+        "Deltas_pct": {
+            "total_effort": -17.555869385021307,
+            "final_error": -62.81916971553715,
+            "itwae": -9.754639175612931,
+            "max_overshoot": 0.07029253736631311
+        }
+    },
+    {
+        "IC_index": 22,
+        "Metrics_PID": {
+            "total_effort": 24268.5602506551,
+            "final_error": 0.030906360021523183,
+            "itwae": 7.732822985597665,
+            "max_overshoot": 51.801700637724345
+        },
+        "Metrics_RL": {
+            "total_effort": 21961.974744190284,
+            "final_error": 0.012648572950339018,
+            "itwae": 7.005966929326634,
+            "max_overshoot": 51.7974784019564
+        },
+        "Deltas_pct": {
+            "total_effort": -9.504418402416572,
+            "final_error": -59.074530480035335,
+            "itwae": -9.39962103910559,
+            "max_overshoot": -0.008150766704506525
+        }
+    },
+    {
+        "IC_index": 23,
+        "Metrics_PID": {
+            "total_effort": 25968.59385461116,
+            "final_error": 0.07612934387167561,
+            "itwae": 16.17928404643797,
+            "max_overshoot": 68.69347994290462
+        },
+        "Metrics_RL": {
+            "total_effort": 23215.085120495438,
+            "final_error": 0.02149023219641356,
+            "itwae": 14.061554332643569,
+            "max_overshoot": 70.57720550159084
+        },
+        "Deltas_pct": {
+            "total_effort": -10.603226148984541,
+            "final_error": -71.77142071178531,
+            "itwae": -13.089143547489924,
+            "max_overshoot": 2.742218854324898
+        }
+    },
+    {
+        "IC_index": 24,
+        "Metrics_PID": {
+            "total_effort": 17336.74171938176,
+            "final_error": 0.03470969362393879,
+            "itwae": 10.234609947166302,
+            "max_overshoot": 54.96807890836441
+        },
+        "Metrics_RL": {
+            "total_effort": 14991.238190375307,
+            "final_error": 0.011395008841410792,
+            "itwae": 9.603224438699582,
+            "max_overshoot": 56.52169658767757
+        },
+        "Deltas_pct": {
+            "total_effort": -13.52909080017197,
+            "final_error": -67.17052888778075,
+            "itwae": -6.16912136101028,
+            "max_overshoot": 2.826399812704286
+        }
+    },
+    {
+        "IC_index": 25,
+        "Metrics_PID": {
+            "total_effort": 35482.06764038656,
+            "final_error": 0.06861005917935392,
+            "itwae": 13.253996362745712,
+            "max_overshoot": 50.27345221692351
+        },
+        "Metrics_RL": {
+            "total_effort": 25101.17441506038,
+            "final_error": 0.022073652090369055,
+            "itwae": 11.434594439257266,
+            "max_overshoot": 50.27054149730566
+        },
+        "Deltas_pct": {
+            "total_effort": -29.25673140172471,
+            "final_error": -67.82738223171299,
+            "itwae": -13.72719498099769,
+            "max_overshoot": -0.0057897747011526396
+        }
+    },
+    {
+        "IC_index": 26,
+        "Metrics_PID": {
+            "total_effort": 11462.253985079837,
+            "final_error": 0.006332859723865725,
+            "itwae": 9.803195640651008,
+            "max_overshoot": 63.561528310864766
+        },
+        "Metrics_RL": {
+            "total_effort": 12136.25687098627,
+            "final_error": 0.02385259374312034,
+            "itwae": 10.89712298588879,
+            "max_overshoot": 64.91606552646827
+        },
+        "Deltas_pct": {
+            "total_effort": 5.880195001644249,
+            "final_error": 276.64806711619633,
+            "itwae": 11.158885177212856,
+            "max_overshoot": 2.1310645788420604
+        }
+    },
+    {
+        "IC_index": 27,
+        "Metrics_PID": {
+            "total_effort": 12120.196664742945,
+            "final_error": 0.007224382405175682,
+            "itwae": 10.020375464662477,
+            "max_overshoot": 74.19167424405677
+        },
+        "Metrics_RL": {
+            "total_effort": 13022.693159499539,
+            "final_error": 0.014432975927052975,
+            "itwae": 10.546700878386368,
+            "max_overshoot": 75.1122948935976
+        },
+        "Deltas_pct": {
+            "total_effort": 7.446219889994945,
+            "final_error": 99.78145006157098,
+            "itwae": 5.252551818841643,
+            "max_overshoot": 1.240867872198725
+        }
+    },
+    {
+        "IC_index": 28,
+        "Metrics_PID": {
+            "total_effort": 52693.04572774095,
+            "final_error": 0.08154788172998789,
+            "itwae": 11.66022970242231,
+            "max_overshoot": 41.828995120340736
+        },
+        "Metrics_RL": {
+            "total_effort": 30979.467580565033,
+            "final_error": 0.020708294211809766,
+            "itwae": 4.631454726844127,
+            "max_overshoot": 41.866737710040354
+        },
+        "Deltas_pct": {
+            "total_effort": -41.20767332252445,
+            "final_error": -74.60596918951651,
+            "itwae": -60.27990146813331,
+            "max_overshoot": 0.09023068708926514
+        }
+    },
+    {
+        "IC_index": 29,
+        "Metrics_PID": {
+            "total_effort": 22051.729965618066,
+            "final_error": 0.02320630866906979,
+            "itwae": 3.573864426431964,
+            "max_overshoot": 58.98264091212308
+        },
+        "Metrics_RL": {
+            "total_effort": 20668.27785985295,
+            "final_error": 0.013800055244169157,
+            "itwae": 2.8678518109970916,
+            "max_overshoot": 59.0214066331371
+        },
+        "Deltas_pct": {
+            "total_effort": -6.273666999923011,
+            "final_error": -40.5331737978545,
+            "itwae": -19.75487962591053,
+            "max_overshoot": 0.0657239493086998
+        }
+    },
+    {
+        "IC_index": 30,
+        "Metrics_PID": {
+            "total_effort": 30303.385381322434,
+            "final_error": 0.052286653962779546,
+            "itwae": 9.151707070985436,
+            "max_overshoot": 45.97523509359584
+        },
+        "Metrics_RL": {
+            "total_effort": 19579.32616751567,
+            "final_error": 0.02493571051832465,
+            "itwae": 6.7014161253425275,
+            "max_overshoot": 45.9665043983898
+        },
+        "Deltas_pct": {
+            "total_effort": -35.38898073222065,
+            "final_error": -52.30960746488916,
+            "itwae": -26.77414089674383,
+            "max_overshoot": -0.018989995784178915
+        }
+    },
+    {
+        "IC_index": 31,
+        "Metrics_PID": {
+            "total_effort": 20299.066127495007,
+            "final_error": 0.030704367303923053,
+            "itwae": 8.535504276059381,
+            "max_overshoot": 48.75528318840468
+        },
+        "Metrics_RL": {
+            "total_effort": 12855.665714300458,
+            "final_error": 0.019617190351136606,
+            "itwae": 7.183846183334562,
+            "max_overshoot": 48.88198710297503
+        },
+        "Deltas_pct": {
+            "total_effort": -36.66868399976535,
+            "final_error": -36.10944607013561,
+            "itwae": -15.835714551933242,
+            "max_overshoot": 0.2598773020776604
+        }
+    },
+    {
+        "IC_index": 32,
+        "Metrics_PID": {
+            "total_effort": 19254.41031572602,
+            "final_error": 0.022094699908796627,
+            "itwae": 9.77168487412155,
+            "max_overshoot": 61.25981517301511
+        },
+        "Metrics_RL": {
+            "total_effort": 16422.271086682078,
+            "final_error": 0.014319372135121414,
+            "itwae": 9.416501022199954,
+            "max_overshoot": 61.25981517301511
+        },
+        "Deltas_pct": {
+            "total_effort": -14.70904163048191,
+            "final_error": -35.19091821011608,
+            "itwae": -3.634827120369318,
+            "max_overshoot": 0.0
+        }
+    },
+    {
+        "IC_index": 33,
+        "Metrics_PID": {
+            "total_effort": 17918.621435158548,
+            "final_error": 0.017061196814889643,
+            "itwae": 6.499065412039916,
+            "max_overshoot": 50.60617185604573
+        },
+        "Metrics_RL": {
+            "total_effort": 10772.326938320273,
+            "final_error": 0.019800507240409066,
+            "itwae": 5.837652608201822,
+            "max_overshoot": 50.619198953500685
+        },
+        "Deltas_pct": {
+            "total_effort": -39.88194361211495,
+            "final_error": 16.055792892142087,
+            "itwae": -10.177044881142242,
+            "max_overshoot": 0.025742112033322263
+        }
+    },
+    {
+        "IC_index": 34,
+        "Metrics_PID": {
+            "total_effort": 14034.271925837531,
+            "final_error": 0.018959025573409546,
+            "itwae": 6.8880607754340595,
+            "max_overshoot": 42.99007542575664
+        },
+        "Metrics_RL": {
+            "total_effort": 10225.824590340897,
+            "final_error": 0.021904207288464518,
+            "itwae": 6.988538215914816,
+            "max_overshoot": 43.838466686794966
+        },
+        "Deltas_pct": {
+            "total_effort": -27.13676459756465,
+            "final_error": 15.534457209581776,
+            "itwae": 1.4587188434675906,
+            "max_overshoot": 1.9734584148462
+        }
+    },
+    {
+        "IC_index": 35,
+        "Metrics_PID": {
+            "total_effort": 45019.26859144917,
+            "final_error": 0.06766096358447805,
+            "itwae": 10.182203569999928,
+            "max_overshoot": 34.89211771182596
+        },
+        "Metrics_RL": {
+            "total_effort": 24040.76054589522,
+            "final_error": 0.01763876391499685,
+            "itwae": 4.027284876496955,
+            "max_overshoot": 35.02145643567277
+        },
+        "Deltas_pct": {
+            "total_effort": -46.598953519068374,
+            "final_error": -73.93066403351767,
+            "itwae": -60.4478063239411,
+            "max_overshoot": 0.37068178238711613
+        }
+    },
+    {
+        "IC_index": 36,
+        "Metrics_PID": {
+            "total_effort": 19741.312725171527,
+            "final_error": 0.016517513740115765,
+            "itwae": 8.437717160867923,
+            "max_overshoot": 76.97148554898985
+        },
+        "Metrics_RL": {
+            "total_effort": 13184.524414191143,
+            "final_error": 0.01805213568514429,
+            "itwae": 7.60494240011238,
+            "max_overshoot": 77.0489630565048
+        },
+        "Deltas_pct": {
+            "total_effort": -33.21353753046032,
+            "final_error": 9.290877363107123,
+            "itwae": -9.869669068995927,
+            "max_overshoot": 0.10065741483662075
+        }
+    },
+    {
+        "IC_index": 37,
+        "Metrics_PID": {
+            "total_effort": 11759.967928357171,
+            "final_error": 0.018062340380898045,
+            "itwae": 7.1300673977685225,
+            "max_overshoot": 46.11408263270163
+        },
+        "Metrics_RL": {
+            "total_effort": 9315.992152287623,
+            "final_error": 0.016180419866898325,
+            "itwae": 7.0314735978637986,
+            "max_overshoot": 46.134996317505234
+        },
+        "Deltas_pct": {
+            "total_effort": -20.782163616078535,
+            "final_error": -10.419029175144757,
+            "itwae": -1.3827891716083998,
+            "max_overshoot": 0.045352056486040966
+        }
+    },
+    {
+        "IC_index": 38,
+        "Metrics_PID": {
+            "total_effort": 19599.71628448461,
+            "final_error": 0.028172840077842848,
+            "itwae": 11.056779835061818,
+            "max_overshoot": 89.6255252625775
+        },
+        "Metrics_RL": {
+            "total_effort": 18770.96683408675,
+            "final_error": 0.018464700170418926,
+            "itwae": 10.85977994860695,
+            "max_overshoot": 90.73447147399169
+        },
+        "Deltas_pct": {
+            "total_effort": -4.2283747293521206,
+            "final_error": -34.45921632536829,
+            "itwae": -1.781711216046524,
+            "max_overshoot": 1.237310697109214
+        }
+    },
+    {
+        "IC_index": 39,
+        "Metrics_PID": {
+            "total_effort": 14834.795900141304,
+            "final_error": 0.007750683912570835,
+            "itwae": 11.98202985073184,
+            "max_overshoot": 75.509180669294
+        },
+        "Metrics_RL": {
+            "total_effort": 15886.719375827768,
+            "final_error": 0.025562487770055056,
+            "itwae": 13.022226913911707,
+            "max_overshoot": 76.81722300501625
+        },
+        "Deltas_pct": {
+            "total_effort": 7.090919772455006,
+            "final_error": 229.8094472488454,
+            "itwae": 8.681309228388663,
+            "max_overshoot": 1.7322957607645812
+        }
+    },
+    {
+        "IC_index": 40,
+        "Metrics_PID": {
+            "total_effort": 25955.397224377783,
+            "final_error": 0.03607046328682207,
+            "itwae": 9.227775382636835,
+            "max_overshoot": 52.28089905591052
+        },
+        "Metrics_RL": {
+            "total_effort": 17462.17265886879,
+            "final_error": 0.019439940939523108,
+            "itwae": 7.382656930501972,
+            "max_overshoot": 52.29728039986308
+        },
+        "Deltas_pct": {
+            "total_effort": -32.722383295031996,
+            "final_error": -46.10565219264797,
+            "itwae": -19.995268367787478,
+            "max_overshoot": 0.03133332488226938
+        }
+    },
+    {
+        "IC_index": 41,
+        "Metrics_PID": {
+            "total_effort": 25112.145735204493,
+            "final_error": 0.057623233517619936,
+            "itwae": 12.30066402693827,
+            "max_overshoot": 58.54044232946326
+        },
+        "Metrics_RL": {
+            "total_effort": 21166.34413735707,
+            "final_error": 0.023637198062714707,
+            "itwae": 10.843095880841712,
+            "max_overshoot": 58.56630280093483
+        },
+        "Deltas_pct": {
+            "total_effort": -15.712721801848406,
+            "final_error": -58.97974372526845,
+            "itwae": -11.849507822541165,
+            "max_overshoot": 0.044175394722891975
+        }
+    },
+    {
+        "IC_index": 42,
+        "Metrics_PID": {
+            "total_effort": 14137.476617319393,
+            "final_error": 0.018253282481325666,
+            "itwae": 6.5084909203149435,
+            "max_overshoot": 54.137537200311385
+        },
+        "Metrics_RL": {
+            "total_effort": 8684.936763457607,
+            "final_error": 0.018159657185743205,
+            "itwae": 5.983679929708204,
+            "max_overshoot": 54.211397063412015
+        },
+        "Deltas_pct": {
+            "total_effort": -38.567984948474084,
+            "final_error": -0.5129230628970225,
+            "itwae": -8.063481950457172,
+            "max_overshoot": 0.13643003897156394
+        }
+    },
+    {
+        "IC_index": 43,
+        "Metrics_PID": {
+            "total_effort": 14758.091335906407,
+            "final_error": 0.032958154761442406,
+            "itwae": 10.764087743707428,
+            "max_overshoot": 60.40959290802204
+        },
+        "Metrics_RL": {
+            "total_effort": 12466.647208929204,
+            "final_error": 0.01962151881211692,
+            "itwae": 10.43752962759093,
+            "max_overshoot": 61.46309494193378
+        },
+        "Deltas_pct": {
+            "total_effort": -15.526697015366237,
+            "final_error": -40.4653599264239,
+            "itwae": -3.0337741933346885,
+            "max_overshoot": 1.7439316889881606
+        }
+    },
+    {
+        "IC_index": 44,
+        "Metrics_PID": {
+            "total_effort": 13184.530281198506,
+            "final_error": 0.01927512533485714,
+            "itwae": 10.044952722067858,
+            "max_overshoot": 71.0391790320674
+        },
+        "Metrics_RL": {
+            "total_effort": 11922.907236160218,
+            "final_error": 0.02043185468093417,
+            "itwae": 10.318438331320438,
+            "max_overshoot": 71.69203032843052
+        },
+        "Deltas_pct": {
+            "total_effort": -9.56896467398157,
+            "final_error": 6.001150840691037,
+            "itwae": 2.7226171871546656,
+            "max_overshoot": 0.9190017470055847
+        }
+    },
+    {
+        "IC_index": 45,
+        "Metrics_PID": {
+            "total_effort": 44745.50417253187,
+            "final_error": 0.0654975731878987,
+            "itwae": 11.072986475260594,
+            "max_overshoot": 49.94062364274332
+        },
+        "Metrics_RL": {
+            "total_effort": 28655.318945231804,
+            "final_error": 0.019396169564147307,
+            "itwae": 5.899116117728703,
+            "max_overshoot": 49.936194180380674
+        },
+        "Deltas_pct": {
+            "total_effort": -35.95933384784035,
+            "final_error": -70.38643018344544,
+            "itwae": -46.72515738271168,
+            "max_overshoot": -0.008869457446769022
+        }
+    },
+    {
+        "IC_index": 46,
+        "Metrics_PID": {
+            "total_effort": 26897.57862602944,
+            "final_error": 0.027826473818594013,
+            "itwae": 8.518522893885727,
+            "max_overshoot": 58.81260213810742
+        },
+        "Metrics_RL": {
+            "total_effort": 16533.218059266186,
+            "final_error": 0.0187341174177889,
+            "itwae": 6.21030753707724,
+            "max_overshoot": 58.84081881780191
+        },
+        "Deltas_pct": {
+            "total_effort": -38.53268991556516,
+            "final_error": -32.67520153678071,
+            "itwae": -27.09642722760347,
+            "max_overshoot": 0.047977267913138166
+        }
+    },
+    {
+        "IC_index": 47,
+        "Metrics_PID": {
+            "total_effort": 15097.03100879771,
+            "final_error": 0.023126030807895177,
+            "itwae": 10.092619046300241,
+            "max_overshoot": 64.5482960374047
+        },
+        "Metrics_RL": {
+            "total_effort": 13951.44636433361,
+            "final_error": 0.02442368043824436,
+            "itwae": 10.334953894117415,
+            "max_overshoot": 65.63174451035233
+        },
+        "Deltas_pct": {
+            "total_effort": -7.588145270394676,
+            "final_error": 5.611207738710481,
+            "itwae": 2.4011096297745387,
+            "max_overshoot": 1.6785082480253177
+        }
+    },
+    {
+        "IC_index": 48,
+        "Metrics_PID": {
+            "total_effort": 22142.36240788758,
+            "final_error": 0.05245030248161928,
+            "itwae": 12.431221914309207,
+            "max_overshoot": 56.289467066903654
+        },
+        "Metrics_RL": {
+            "total_effort": 18066.805847655407,
+            "final_error": 0.019412749646981142,
+            "itwae": 11.321930290107504,
+            "max_overshoot": 58.319781005237765
+        },
+        "Deltas_pct": {
+            "total_effort": -18.40615055049579,
+            "final_error": -62.98829801070421,
+            "itwae": -8.923431918827145,
+            "max_overshoot": 3.6069162565013304
+        }
+    },
+    {
+        "IC_index": 49,
+        "Metrics_PID": {
+            "total_effort": 25747.14020497498,
+            "final_error": 0.042617043871917,
+            "itwae": 10.03669687931085,
+            "max_overshoot": 45.71556334095236
+        },
+        "Metrics_RL": {
+            "total_effort": 20494.21109793355,
+            "final_error": 0.019440630180343393,
+            "itwae": 8.837606067198656,
+            "max_overshoot": 45.782178846994405
+        },
+        "Deltas_pct": {
+            "total_effort": -20.401990532627924,
+            "final_error": -54.38296884511497,
+            "itwae": -11.947066116781317,
+            "max_overshoot": 0.1457173469464243
+        }
+    },
+    {
+        "IC_index": 50,
+        "Metrics_PID": {
+            "total_effort": 17094.919421461367,
+            "final_error": 0.013318926045044137,
+            "itwae": 12.607509985517662,
+            "max_overshoot": 71.29004044619097
+        },
+        "Metrics_RL": {
+            "total_effort": 17603.12880246351,
+            "final_error": 0.027476794910901905,
+            "itwae": 13.576641177107536,
+            "max_overshoot": 72.73378583373635
+        },
+        "Deltas_pct": {
+            "total_effort": 2.9728679525925417,
+            "final_error": 106.29887738678296,
+            "itwae": 7.686935744672196,
+            "max_overshoot": 2.025171227999375
+        }
+    }
+]

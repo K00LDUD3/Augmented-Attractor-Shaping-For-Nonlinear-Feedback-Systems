@@ -1,0 +1,20 @@
+[2026-04-30 08:17:52] [INFO] [MET]: START Session 1
+[2026-04-30 08:17:52] [INFO] [BEG]: Run UID: 2026-04-30_08-17-52_522fd2c393
+[2026-04-30 08:17:52] [INFO] [DEF]: Generating 50 LHS ICs on the surface of [-40, 40]^6 (seed=42)...
+[2026-04-30 08:17:52] [INFO] [DEF]: Surface verification: 50/50 ICs on boundary
+[2026-04-30 08:17:52] [INFO] [PAT]: Master ICs saved to logs/master_fixed_ics.json
+[2026-04-30 08:17:52] [INFO] [DEF]: ============================================================
+[2026-04-30 08:17:52] [INFO] [DEF]: PID BASELINE STRESS TEST (50 ICs, 8 workers)
+[2026-04-30 08:17:52] [INFO] [DEF]: ============================================================
+[2026-04-30 08:46:56] [INFO] [DEF]: Completed in 1743.5s (8 workers)
+[2026-04-30 08:46:56] [INFO] [DEF]: Diverged:      0/50
+[2026-04-30 08:46:56] [INFO] [DEF]: Effort:        mean=22872.6  std=11174.3  median=20378.2  [2195.5, 56088.4]
+[2026-04-30 08:46:56] [INFO] [DEF]: Final Error:   mean=0.037864  std=0.021664  median=0.033381
+[2026-04-30 08:46:56] [INFO] [DEF]: ITWAE:         mean=10.68  std=2.30  median=10.21
+[2026-04-30 08:46:56] [INFO] [DEF]: Reward:        mean=108.5  median=195.7
+[2026-04-30 08:46:56] [INFO] [DEF]: Conv Step:     mean=387  median=372
+[2026-04-30 08:46:56] [INFO] [DEF]: ============================================================
+[2026-04-30 08:46:56] [INFO] [PAT]: PID baseline results saved to logs/pid_baseline.json
+[2026-04-30 08:46:56] [INFO] [PAT]: Trajectory cache saved to data/pid_trajectory_cache.npz (7.1 MB)
+[2026-04-30 08:46:56] [INFO] [FIN]: Done. Results are in: /home/tanush/Repos/Augmented-Attractor-Shaping-For-Nonlinear-Feedback-Systems/Take 2/Pillar 6/IC_basePID_stresstest_batch
+[2026-04-30 08:46:56] [INFO] [MET]: END Session 1

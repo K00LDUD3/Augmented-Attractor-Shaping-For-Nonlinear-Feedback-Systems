@@ -1,0 +1,23 @@
+{
+    "variant": "6c",
+    "dt": 0.005,
+    "episode_length": 2000,
+    "rl_lambda": 50.0,
+    "u_max": 250.0,
+    "freq_ratio": 10,
+    "state_bound": 40.0,
+    "init_bound": 40.0,
+    "attractor_radius": 30.0,
+    "reward_distance_coeff": 5.0,
+    "reward_effort_coeff": 30.0,
+    "reward_gali_coeff": 0.1,
+    "reward_convergence_bonus": 1.0,
+    "reward_sparsity_coeff": 0.1,
+    "reward_action_deriv_coeff": 0.1,
+    "reward_surf_coeff": 0.3,
+    "convergence_threshold": 0.5,
+    "n_ics": 50,
+    "seed": 42,
+    "max_workers": 8,
+    "ic_strategy": "LHS_surface_snap"
+}

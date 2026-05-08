@@ -1,0 +1,50 @@
+{
+    "uid": "2026-04-06_02-10-39_0a402e42",
+    "timestamp": "2026-04-06T03:26:22.833765",
+    "total_samples": 325000,
+    "sampling": {
+        "base_samples": 250000,
+        "split_ratio": 0.8,
+        "n_core": 200000,
+        "n_shell": 50000,
+        "refine_n": 75000
+    },
+    "physical_constants": {
+        "SIGMA": 10.0,
+        "RHO": 28.0,
+        "BETA": 2.6666666666666665,
+        "K_C": 2.5,
+        "system": "2-Coupled Lorenz",
+        "variational_dim": 18
+    },
+    "simulation_settings": {
+        "t_max": 12.0,
+        "steps": 120,
+        "solver": "RK45",
+        "rtol": 1e-06,
+        "atol": 1e-06,
+        "DT": 0.005
+    },
+    "control_context": {
+        "Kp_baseline": 30.0,
+        "target": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "pillar_4_ref": "Constrained Gain"
+    },
+    "domain_bounds": {
+        "shell_bounds": [
+            -60.0,
+            60.0
+        ],
+        "core_bounds": [
+            -40.0,
+            40.0
+        ]
+    }
+}
