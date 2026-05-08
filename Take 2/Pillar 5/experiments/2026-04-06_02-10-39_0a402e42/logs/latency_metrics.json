@@ -1,0 +1,7 @@
+{
+    "model": "sali_surrogate_v4_inv_density",
+    "torch_latency_cpu_ms": 0.4834160000027623,
+    "torch_latency_cuda_ms": 0.8506880999775603,
+    "onnx_latency_cpu_ms": 0.08651339999050833,
+    "onnx_latency_cuda_ms": 0.6420546000008471
+}

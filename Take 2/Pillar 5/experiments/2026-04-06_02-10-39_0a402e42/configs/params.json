@@ -1,0 +1,39 @@
+{
+    "uid": "2026-04-10_06-03-45_29331e02",
+    "notes": "v4: Inv-Density base + Soft Sigmoid Zone Multipliers",
+    "architecture": "Residual MLP (3 Blocks) v4",
+    "hidden_dim": 512,
+    "epochs": 250,
+    "checkpoint_every_n_epochs": 10,
+    "optimizer": "AdamW",
+    "lr": 0.0003,
+    "loss_function": "Inv-Density + Soft Sigmoid Zone Weighting",
+    "accuracy_metrics": [
+        "JS Accuracy: (1 - JSD_nats / ln2) * 100",
+        "Histogram Intersection: sum(min(P,Q)) * 100"
+    ],
+    "weight_coefficients": {
+        "inv_density_bins": 200,
+        "transition_soft_peak": 2.5,
+        "stable_soft_peak": 5.0,
+        "transition_center_logGALI": -0.7,
+        "stable_threshold_logGALI": -0.4
+    },
+    "dataset": ".\\Pillar 5\\experiments\\2026-04-06_02-10-39_0a402e42\\gali_dataset.csv",
+    "data_normalization": {
+        "s_min": -11.494197070506956,
+        "s_max": 4.821637332766433e-16
+    },
+    "physical_constants": {
+        "SIGMA": 10.0,
+        "RHO": 28.0,
+        "BETA": 2.6666666666666665,
+        "K_C": 2.5,
+        "system": "2-Coupled Lorenz"
+    },
+    "system_info": {
+        "python_version": "3.12.13 | packaged by Anaconda, Inc. | (main, Mar 19 2026, 20:16:45) [MSC v.1942 64 bit (AMD64)]",
+        "torch_version": "2.11.0+cu126",
+        "device": "cuda"
+    }
+}
