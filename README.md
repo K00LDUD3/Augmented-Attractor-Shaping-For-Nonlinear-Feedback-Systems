@@ -1,5 +1,5 @@
 # Augmented Attractor Shaping For Nonlinear Feedback Systems
-
+The report containing a full description of the problem statement, methodology and results can be found [here](https://github.com/K00LDUD3/Augmented-Attractor-Shaping-For-Nonlinear-Feedback-Systems/blob/main/Report.pdf)
 ## Take 2: Project Pillars
 
 ### Pillar 2: Nonlinear Dynamics Analysis
